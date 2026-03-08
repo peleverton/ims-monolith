@@ -1,5 +1,6 @@
 using IMS.Modular.Modules.Issues.Application.DTOs;
 using IMS.Modular.Modules.Issues.Domain.Enums;
+using IMS.Modular.Shared.Behaviors;
 using IMS.Modular.Shared.Common;
 using MediatR;
 
@@ -14,7 +15,11 @@ public record GetAllIssuesQuery(
     string SortDirection = "asc",
     IssueStatus? Status = null,
     IssuePriority? Priority = null,
-    string? SearchTerm = null) : IRequest<PagedResult<IssueDto>>;
+    string? SearchTerm = null) : IRequest<PagedResult<IssueDto>>, ICacheable
+{
+    public string CacheKeyPrefix => "issues-list";
+    public TimeSpan? CacheDuration => TimeSpan.FromMinutes(2);
+}
 
 public record GetIssuesByStatusQuery(
     IssueStatus Status,
