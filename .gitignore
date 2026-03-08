@@ -1,0 +1,37 @@
+# .NET
+bin/
+obj/
+*.dll
+*.pdb
+*.exe
+*.cache
+
+# IDE
+.vs/
+.vscode/
+*.user
+*.suo
+*.sln.docstates
+
+# SQLite dev databases
+*.db
+*.db-shm
+*.db-wal
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build
+publish/
+out/
+
+# NuGet
+*.nupkg
+**/packages/*
+
+# Logs
+*.log
+
+# User secrets
+secrets.json
