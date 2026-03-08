@@ -1,4 +1,4 @@
-namespace IMS.Modular.Shared.Behaviors;
+namespace IMS.Modular.Shared.Abstractions;
 
 /// <summary>
 /// Cache service abstraction. Supports Redis (distributed) or in-memory fallback.

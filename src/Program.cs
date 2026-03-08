@@ -3,7 +3,9 @@ using IMS.Modular.Modules.Auth;
 using IMS.Modular.Modules.Auth.Api;
 using IMS.Modular.Modules.Issues;
 using IMS.Modular.Modules.Issues.Api;
+using IMS.Modular.Shared.Abstractions;
 using IMS.Modular.Shared.Behaviors;
+using IMS.Modular.Shared.Middleware;
 using MediatR;
 using Microsoft.OpenApi.Models;
 using System.Text.Json.Serialization;
@@ -70,6 +72,9 @@ builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<ICacheService, InMemoryCacheService>();
 
+// Middleware services (IUserContext, ICorrelationIdAccessor, IHttpContextAccessor)
+builder.Services.AddMiddlewareServices();
+
 // CORS
 builder.Services.AddCors(options =>
 {
@@ -94,6 +99,9 @@ var app = builder.Build();
 // MIDDLEWARE PIPELINE
 // ============================================================
 
+// Cross-cutting middleware (CorrelationId → Metrics → PerformanceTiming)
+app.UseImsMiddleware();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -107,6 +115,9 @@ if (app.Environment.IsDevelopment())
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
+
+// UserContext middleware (must be after auth — extracts JWT claims into IUserContext)
+app.UseUserContext();
 
 // ============================================================
 // SYSTEM ENDPOINTS
