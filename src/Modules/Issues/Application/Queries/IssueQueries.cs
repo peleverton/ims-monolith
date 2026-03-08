@@ -1,6 +1,6 @@
 using IMS.Modular.Modules.Issues.Application.DTOs;
 using IMS.Modular.Modules.Issues.Domain.Enums;
-using IMS.Modular.Shared.Behaviors;
+using IMS.Modular.Shared.Abstractions;
 using IMS.Modular.Shared.Common;
 using MediatR;
 

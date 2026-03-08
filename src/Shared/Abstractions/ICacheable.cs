@@ -1,4 +1,4 @@
-namespace IMS.Modular.Shared.Behaviors;
+namespace IMS.Modular.Shared.Abstractions;
 
 /// <summary>
 /// Marker interface for cacheable MediatR queries.

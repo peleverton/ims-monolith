@@ -1,4 +1,5 @@
 using System.Text.Json;
+using IMS.Modular.Shared.Abstractions;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace IMS.Modular.Shared.Behaviors;
