@@ -3,6 +3,8 @@ using IMS.Modular.Modules.Auth;
 using IMS.Modular.Modules.Auth.Api;
 using IMS.Modular.Modules.Issues;
 using IMS.Modular.Modules.Issues.Api;
+using IMS.Modular.Shared.Behaviors;
+using MediatR;
 using Microsoft.OpenApi.Models;
 using System.Text.Json.Serialization;
 
@@ -52,10 +54,21 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
 // MediatR (scans all handlers in current assembly)
 builder.Services.AddMediatR(cfg =>
-    cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
+{
+    cfg.RegisterServicesFromAssembly(typeof(Program).Assembly);
+
+    // Pipeline Behaviors (order matters: Validation → Logging → Caching → Handler)
+    cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+    cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
+    cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(CachingBehavior<,>));
+});
 
 // FluentValidation (scans all validators in current assembly)
 builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
+
+// Cache services (in-memory fallback; Redis will replace this in Phase 2)
+builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<ICacheService, InMemoryCacheService>();
 
 // CORS
 builder.Services.AddCors(options =>
