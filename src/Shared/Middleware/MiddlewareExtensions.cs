@@ -1,4 +1,5 @@
 using IMS.Modular.Shared.Abstractions;
+using IMS.Modular.Shared.Errors;
 
 namespace IMS.Modular.Shared.Middleware;
 
@@ -26,11 +27,14 @@ public static class MiddlewareExtensions
     /// Call in Program.cs after Build() and before UseAuthentication().
     ///
     /// Pipeline order:
-    ///   CorrelationId → Metrics → PerformanceTiming → [Auth] → UserContext → [Routing]
+    ///   ExceptionHandling → CorrelationId → Metrics → PerformanceTiming → [Auth] → UserContext → [Routing]
     /// </summary>
     public static WebApplication UseImsMiddleware(this WebApplication app)
     {
-        // 1. CorrelationId — first, so all downstream middleware/logs have the ID
+        // 0. ExceptionHandling — outermost, catches all unhandled exceptions → ProblemDetails
+        app.UseMiddleware<ExceptionHandlingMiddleware>();
+
+        // 1. CorrelationId — early, so all downstream middleware/logs have the ID
         app.UseMiddleware<CorrelationIdMiddleware>();
 
         // 2. Metrics — wraps everything to capture full request lifecycle
