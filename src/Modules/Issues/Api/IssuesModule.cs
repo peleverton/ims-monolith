@@ -4,6 +4,7 @@ using IMS.Modular.Modules.Issues.Application.DTOs;
 using IMS.Modular.Modules.Issues.Application.Queries;
 using IMS.Modular.Modules.Issues.Domain.Enums;
 using IMS.Modular.Shared.Abstractions;
+using IMS.Modular.Shared.Errors;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -105,46 +106,45 @@ public class IssuesModule : IEndpointModule
         IValidator<CreateIssueRequest> validator,
         IMediator mediator,
         ClaimsPrincipal user,
+        HttpContext httpContext,
         CancellationToken ct)
     {
         var validation = await validator.ValidateAsync(request, ct);
         if (!validation.IsValid)
-            return Results.ValidationProblem(validation.ToDictionary());
+            return validation.ToDictionary().ToValidationProblem(httpContext);
 
         var userId = GetUserId(user);
         var command = new CreateIssueCommand(request.Title, request.Description, request.Priority, userId, request.DueDate);
         var result = await mediator.Send(command, ct);
 
-        return result.IsSuccess
-            ? Results.Created($"/api/issues/{result.Value!.Id}", result.Value)
-            : Results.BadRequest(new { error = result.Error });
+        return result.ToCreatedResult($"/api/issues/{result.Value?.Id}", httpContext);
     }
 
     private static async Task<IResult> Update(
         Guid id, UpdateIssueRequest request,
         IValidator<UpdateIssueRequest> validator,
-        IMediator mediator, ClaimsPrincipal user, CancellationToken ct)
+        IMediator mediator, ClaimsPrincipal user,
+        HttpContext httpContext, CancellationToken ct)
     {
         var validation = await validator.ValidateAsync(request, ct);
         if (!validation.IsValid)
-            return Results.ValidationProblem(validation.ToDictionary());
+            return validation.ToDictionary().ToValidationProblem(httpContext);
 
         var userId = GetUserId(user);
         var result = await mediator.Send(new UpdateIssueCommand(id, request.Title, request.Description, request.Priority, request.DueDate, userId), ct);
 
-        return result.IsSuccess
-            ? Results.Ok(result.Value)
-            : Results.NotFound(new { error = result.Error });
+        return result.ToApiResult(httpContext);
     }
 
     private static async Task<IResult> UpdateStatus(
         Guid id, UpdateStatusRequest request,
         IValidator<UpdateStatusRequest> validator,
-        IMediator mediator, ClaimsPrincipal user, CancellationToken ct)
+        IMediator mediator, ClaimsPrincipal user,
+        HttpContext httpContext, CancellationToken ct)
     {
         var validation = await validator.ValidateAsync(request, ct);
         if (!validation.IsValid)
-            return Results.ValidationProblem(validation.ToDictionary());
+            return validation.ToDictionary().ToValidationProblem(httpContext);
 
         if (!Enum.TryParse<IssueStatus>(request.Status, true, out var status))
             return Results.BadRequest(new { error = "Invalid status value" });
@@ -152,66 +152,61 @@ public class IssuesModule : IEndpointModule
         var userId = GetUserId(user);
         var result = await mediator.Send(new ChangeIssueStatusCommand(id, status, userId), ct);
 
-        return result.IsSuccess
-            ? Results.Ok(result.Value)
-            : Results.NotFound(new { error = result.Error });
+        return result.ToApiResult(httpContext);
     }
 
     private static async Task<IResult> Assign(
         Guid id, AssignIssueRequest request,
         IValidator<AssignIssueRequest> validator,
-        IMediator mediator, ClaimsPrincipal user, CancellationToken ct)
+        IMediator mediator, ClaimsPrincipal user,
+        HttpContext httpContext, CancellationToken ct)
     {
         var validation = await validator.ValidateAsync(request, ct);
         if (!validation.IsValid)
-            return Results.ValidationProblem(validation.ToDictionary());
+            return validation.ToDictionary().ToValidationProblem(httpContext);
 
         var userId = GetUserId(user);
         var result = await mediator.Send(new AssignIssueCommand(id, request.AssigneeId, userId), ct);
 
-        return result.IsSuccess
-            ? Results.Ok(result.Value)
-            : Results.NotFound(new { error = result.Error });
+        return result.ToApiResult(httpContext);
     }
 
     private static async Task<IResult> AddComment(
         Guid id, AddCommentRequest request,
         IValidator<AddCommentRequest> validator,
-        IMediator mediator, ClaimsPrincipal user, CancellationToken ct)
+        IMediator mediator, ClaimsPrincipal user,
+        HttpContext httpContext, CancellationToken ct)
     {
         var validation = await validator.ValidateAsync(request, ct);
         if (!validation.IsValid)
-            return Results.ValidationProblem(validation.ToDictionary());
+            return validation.ToDictionary().ToValidationProblem(httpContext);
 
         var userId = GetUserId(user);
         var result = await mediator.Send(new AddCommentCommand(id, request.Content, userId), ct);
 
-        return result.IsSuccess
-            ? Results.Ok(result.Value)
-            : Results.NotFound(new { error = result.Error });
+        return result.ToApiResult(httpContext);
     }
 
     private static async Task<IResult> AddTag(
         Guid id, AddTagRequest request,
         IValidator<AddTagRequest> validator,
-        IMediator mediator, ClaimsPrincipal user, CancellationToken ct)
+        IMediator mediator, ClaimsPrincipal user,
+        HttpContext httpContext, CancellationToken ct)
     {
         var validation = await validator.ValidateAsync(request, ct);
         if (!validation.IsValid)
-            return Results.ValidationProblem(validation.ToDictionary());
+            return validation.ToDictionary().ToValidationProblem(httpContext);
 
         var userId = GetUserId(user);
         var result = await mediator.Send(new AddTagCommand(id, request.Name, request.Color, userId), ct);
 
-        return result.IsSuccess
-            ? Results.Ok(result.Value)
-            : Results.NotFound(new { error = result.Error });
+        return result.ToApiResult(httpContext);
     }
 
-    private static async Task<IResult> Delete(Guid id, IMediator mediator, CancellationToken ct)
+    private static async Task<IResult> Delete(Guid id, IMediator mediator, HttpContext httpContext, CancellationToken ct)
     {
         var result = await mediator.Send(new DeleteIssueCommand(id), ct);
-        return result.IsSuccess ? Results.NoContent() : Results.NotFound(new { error = result.Error });
+        return result.ToApiResult(httpContext);
     }
 
     private static Guid GetUserId(ClaimsPrincipal user)

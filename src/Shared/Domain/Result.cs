@@ -27,6 +27,9 @@ public class Result<T>
     public static Result<T> Failure(string error, int errorCode = 400) => new(error, errorCode);
     public static Result<T> NotFound(string error) => new(error, 404);
     public static Result<T> Unauthorized(string error) => new(error, 401);
+    public static Result<T> Forbidden(string error) => new(error, 403);
+    public static Result<T> Conflict(string error) => new(error, 409);
+    public static Result<T> Unprocessable(string error) => new(error, 422);
 }
 
 public class Result
@@ -46,4 +49,6 @@ public class Result
     public static Result Success() => new(true);
     public static Result Failure(string error, int errorCode = 400) => new(error, errorCode);
     public static Result NotFound(string error) => new(error, 404);
+    public static Result Forbidden(string error) => new(error, 403);
+    public static Result Conflict(string error) => new(error, 409);
 }
