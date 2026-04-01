@@ -2,6 +2,7 @@ using FluentValidation;
 using IMS.Modular.Modules.Auth.Application.DTOs;
 using IMS.Modular.Modules.Auth.Application.Services;
 using IMS.Modular.Shared.Abstractions;
+using IMS.Modular.Shared.RateLimiting;
 using System.Security.Claims;
 
 namespace IMS.Modular.Modules.Auth.Api;
@@ -14,8 +15,8 @@ public class AuthModule : IEndpointModule
             .MapGroup("/api/auth")
             .WithTags("Authentication");
 
-        group.MapPost("/login", Login).AllowAnonymous().WithName("Login");
-        group.MapPost("/register", Register).AllowAnonymous().WithName("Register");
+        group.MapPost("/login", Login).AllowAnonymous().RequireRateLimiting(RateLimitingExtensions.Policies.Auth).WithName("Login");
+        group.MapPost("/register", Register).AllowAnonymous().RequireRateLimiting(RateLimitingExtensions.Policies.Auth).WithName("Register");
         group.MapPost("/refresh", Refresh).AllowAnonymous().WithName("RefreshToken");
         group.MapGet("/me", GetMe).RequireAuthorization().WithName("GetMe");
         group.MapGet("/test", TestAuth).RequireAuthorization().WithName("TestAuth");

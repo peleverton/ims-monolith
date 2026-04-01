@@ -1,16 +1,38 @@
 using FluentValidation;
 using IMS.Modular.Modules.Auth;
 using IMS.Modular.Modules.Auth.Api;
+using IMS.Modular.Modules.Inventory;
 using IMS.Modular.Modules.Issues;
 using IMS.Modular.Modules.Issues.Api;
 using IMS.Modular.Shared.Abstractions;
 using IMS.Modular.Shared.Behaviors;
+using IMS.Modular.Shared.Caching;
+using IMS.Modular.Shared.HealthChecks;
 using IMS.Modular.Shared.Middleware;
+using IMS.Modular.Shared.Observability;
+using IMS.Modular.Shared.RateLimiting;
 using MediatR;
 using Microsoft.OpenApi.Models;
+using Serilog;
 using System.Text.Json.Serialization;
 
+// ============================================================
+// BOOTSTRAP LOGGER (captures startup errors before DI is ready)
+// ============================================================
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console()
+    .CreateBootstrapLogger();
+
+try
+{
+
 var builder = WebApplication.CreateBuilder(args);
+
+// ============================================================
+// SERILOG (Structured Logging — US-006)
+// ============================================================
+
+builder.AddSerilogLogging();
 
 // ============================================================
 // SHARED SERVICES
@@ -68,9 +90,11 @@ builder.Services.AddMediatR(cfg =>
 // FluentValidation (scans all validators in current assembly)
 builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
 
-// Cache services (in-memory fallback; Redis will replace this in Phase 2)
-builder.Services.AddMemoryCache();
-builder.Services.AddSingleton<ICacheService, InMemoryCacheService>();
+// ============================================================
+// CACHING (US-008: Output Caching + Redis Distributed Cache)
+// ============================================================
+
+builder.Services.AddImsCaching(builder.Configuration);
 
 // Middleware services (IUserContext, ICorrelationIdAccessor, IHttpContextAccessor)
 builder.Services.AddMiddlewareServices();
@@ -88,6 +112,25 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddAuthModule(builder.Configuration);
 builder.Services.AddIssuesModule(builder.Configuration);
+builder.Services.AddInventoryModule(builder.Configuration);
+
+// ============================================================
+// HEALTH CHECKS (US-007)
+// ============================================================
+
+builder.Services.AddImsHealthChecks(builder.Configuration);
+
+// ============================================================
+// RATE LIMITING (US-009)
+// ============================================================
+
+builder.Services.AddImsRateLimiting(builder.Configuration);
+
+// ============================================================
+// OPENTELEMETRY (US-010: Traces + Metrics + Prometheus)
+// ============================================================
+
+builder.Services.AddImsOpenTelemetry(builder.Configuration);
 
 // ============================================================
 // BUILD APP
@@ -102,6 +145,9 @@ var app = builder.Build();
 // Cross-cutting middleware (CorrelationId → Metrics → PerformanceTiming)
 app.UseImsMiddleware();
 
+// Serilog request logging (after CorrelationId middleware so it captures the ID)
+app.UseSerilogRequestLogging();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -113,15 +159,28 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors();
+
+// Rate Limiting (US-009 — before auth so rate-limited requests are rejected early)
+app.UseRateLimiter();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
 // UserContext middleware (must be after auth — extracts JWT claims into IUserContext)
 app.UseUserContext();
 
+// Output Caching (US-008 — must be after auth so cached responses respect authorization)
+app.UseOutputCache();
+
 // ============================================================
 // SYSTEM ENDPOINTS
 // ============================================================
+
+// Health check endpoints (/health, /health/live, /health/ready)
+app.MapImsHealthChecks();
+
+// Prometheus metrics endpoint (/metrics — US-010)
+app.MapImsMetrics();
 
 app.MapGet("/api/ping", () => Results.Ok(new
 {
@@ -138,7 +197,7 @@ app.MapGet("/api/status", () => Results.Ok(new
     Status = "Running",
     Version = "1.0.0",
     Environment = app.Environment.EnvironmentName,
-    Modules = new[] { "Auth", "Issues" },
+    Modules = new[] { "Auth", "Issues", "Inventory" },
     Timestamp = DateTime.UtcNow
 }))
 .WithName("GetStatus")
@@ -158,11 +217,22 @@ IssuesModule.Map(app);
 
 await app.Services.InitializeAuthModuleAsync();
 await app.Services.InitializeIssuesModuleAsync();
+await app.Services.InitializeInventoryModuleAsync();
 
 // ============================================================
 // RUN
 // ============================================================
 
 app.Run();
+
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application terminated unexpectedly");
+}
+finally
+{
+    Log.CloseAndFlush();
+}
 
 public partial class Program { }
