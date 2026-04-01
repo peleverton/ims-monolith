@@ -1,4 +1,5 @@
 using IMS.Modular.Shared.Abstractions;
+using Serilog.Context;
 
 namespace IMS.Modular.Shared.Middleware;
 
@@ -6,6 +7,7 @@ namespace IMS.Modular.Shared.Middleware;
 /// Reads or generates a X-Correlation-Id header for every request.
 /// Propagates the correlation ID to the response and makes it available
 /// via ICorrelationIdAccessor for structured logging enrichment.
+/// Pushes the CorrelationId to Serilog's LogContext for automatic enrichment.
 /// </summary>
 public sealed class CorrelationIdMiddleware
 {
@@ -29,10 +31,8 @@ public sealed class CorrelationIdMiddleware
             return Task.CompletedTask;
         });
 
-        // Add to logger scope so all logs in this request include CorrelationId
-        using (context.RequestServices.GetRequiredService<ILoggerFactory>()
-            .CreateLogger("CorrelationId")
-            .BeginScope(new Dictionary<string, object> { ["CorrelationId"] = correlationId }))
+        // Push to Serilog LogContext so all logs in this request include CorrelationId
+        using (LogContext.PushProperty("CorrelationId", correlationId))
         {
             await _next(context);
         }
