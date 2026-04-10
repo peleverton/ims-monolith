@@ -6,6 +6,16 @@ using IMS.Modular.Shared.Domain;
 namespace IMS.Modular.Modules.Inventory.Infrastructure;
 
 /// <summary>
+/// Helper to normalise Guid to uppercase string for SQLite TEXT comparisons.
+/// EF Core stores GUIDs as uppercase TEXT; C# Guid.ToString() is lowercase.
+/// </summary>
+file static class GuidHelper
+{
+    internal static string Up(Guid id) => id.ToString().ToUpperInvariant();
+    internal static string? Up(Guid? id) => id.HasValue ? id.Value.ToString().ToUpperInvariant() : null;
+}
+
+/// <summary>
 /// Dapper read repository for Product — raw SQL, direct DTO projection.
 /// </summary>
 public class ProductReadRepository(IDbConnection connection) : IProductReadRepository
@@ -18,10 +28,10 @@ public class ProductReadRepository(IDbConnection connection) : IProductReadRepos
                    Unit, Currency, LocationId, SupplierId, ExpiryDate,
                    StockStatus, IsActive, CreatedAt, UpdatedAt
             FROM Products
-            WHERE Id = @Id
+            WHERE UPPER(Id) = @Id
             """;
 
-        return await connection.QuerySingleOrDefaultAsync<ProductReadDto>(sql, new { Id = id.ToString() });
+        return await connection.QuerySingleOrDefaultAsync<ProductReadDto>(sql, new { Id = GuidHelper.Up(id) });
     }
 
     public async Task<ProductReadDto?> GetBySkuAsync(string sku, CancellationToken ct = default)
@@ -38,7 +48,7 @@ public class ProductReadRepository(IDbConnection connection) : IProductReadRepos
         return await connection.QuerySingleOrDefaultAsync<ProductReadDto>(sql, new { SKU = sku });
     }
 
-    public async Task<PagedResult<ProductListDto>> GetPagedAsync(
+    public async Task<PagedResult<ProductSummaryDto>> GetPagedAsync(
         int page,
         int pageSize,
         Domain.Enums.ProductCategory? category = null,
@@ -63,13 +73,13 @@ public class ProductReadRepository(IDbConnection connection) : IProductReadRepos
         }
         if (locationId.HasValue)
         {
-            whereClauses.Add("LocationId = @LocationId");
-            parameters.Add("LocationId", locationId.Value.ToString());
+            whereClauses.Add("UPPER(LocationId) = @LocationId");
+            parameters.Add("LocationId", GuidHelper.Up(locationId));
         }
         if (supplierId.HasValue)
         {
-            whereClauses.Add("SupplierId = @SupplierId");
-            parameters.Add("SupplierId", supplierId.Value.ToString());
+            whereClauses.Add("UPPER(SupplierId) = @SupplierId");
+            parameters.Add("SupplierId", GuidHelper.Up(supplierId));
         }
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -95,10 +105,10 @@ public class ProductReadRepository(IDbConnection connection) : IProductReadRepos
         parameters.Add("Offset", (page - 1) * pageSize);
 
         using var multi = await connection.QueryMultipleAsync(sql, parameters);
-        var items = (await multi.ReadAsync<ProductListDto>()).ToList();
+        var items = (await multi.ReadAsync<ProductSummaryDto>()).ToList();
         var totalCount = await multi.ReadSingleAsync<int>();
 
-        return new PagedResult<ProductListDto>(items, totalCount, page, pageSize);
+        return new PagedResult<ProductSummaryDto>(items, totalCount, page, pageSize);
     }
 }
 
@@ -121,8 +131,8 @@ public class StockMovementReadRepository(IDbConnection connection) : IStockMovem
 
         if (productId.HasValue)
         {
-            whereClauses.Add("sm.ProductId = @ProductId");
-            parameters.Add("ProductId", productId.Value.ToString());
+            whereClauses.Add("UPPER(sm.ProductId) = @ProductId");
+            parameters.Add("ProductId", GuidHelper.Up(productId));
         }
         if (movementType.HasValue)
         {
@@ -149,8 +159,8 @@ public class StockMovementReadRepository(IDbConnection connection) : IStockMovem
                    sm.MovementType, sm.Quantity, sm.LocationId, l.Name AS LocationName,
                    sm.Reference, sm.Notes, sm.MovementDate
             FROM StockMovements sm
-            LEFT JOIN Products p ON p.Id = sm.ProductId
-            LEFT JOIN Locations l ON l.Id = sm.LocationId
+            LEFT JOIN Products p ON UPPER(p.Id) = UPPER(sm.ProductId)
+            LEFT JOIN Locations l ON UPPER(l.Id) = UPPER(sm.LocationId)
             {whereClause}
             ORDER BY sm.MovementDate DESC
             LIMIT @PageSize OFFSET @Offset;
@@ -181,13 +191,13 @@ public class SupplierReadRepository(IDbConnection connection) : ISupplierReadRep
                    Country, PostalCode, TaxId, CreditLimit, PaymentTermsDays,
                    IsActive, Notes, CreatedAt, UpdatedAt
             FROM Suppliers
-            WHERE Id = @Id
+            WHERE UPPER(Id) = @Id
             """;
 
-        return await connection.QuerySingleOrDefaultAsync<SupplierReadDto>(sql, new { Id = id.ToString() });
+        return await connection.QuerySingleOrDefaultAsync<SupplierReadDto>(sql, new { Id = GuidHelper.Up(id) });
     }
 
-    public async Task<PagedResult<SupplierListDto>> GetPagedAsync(
+    public async Task<PagedResult<SupplierSummaryDto>> GetPagedAsync(
         int page,
         int pageSize,
         bool? isActive = null,
@@ -226,10 +236,10 @@ public class SupplierReadRepository(IDbConnection connection) : ISupplierReadRep
         parameters.Add("Offset", (page - 1) * pageSize);
 
         using var multi = await connection.QueryMultipleAsync(sql, parameters);
-        var items = (await multi.ReadAsync<SupplierListDto>()).ToList();
+        var items = (await multi.ReadAsync<SupplierSummaryDto>()).ToList();
         var totalCount = await multi.ReadSingleAsync<int>();
 
-        return new PagedResult<SupplierListDto>(items, totalCount, page, pageSize);
+        return new PagedResult<SupplierSummaryDto>(items, totalCount, page, pageSize);
     }
 }
 
@@ -244,13 +254,13 @@ public class LocationReadRepository(IDbConnection connection) : ILocationReadRep
             SELECT Id, Name, Code, Type, Capacity, Description, ParentLocationId,
                    Address, City, State, Country, PostalCode, IsActive, CreatedAt, UpdatedAt
             FROM Locations
-            WHERE Id = @Id
+            WHERE UPPER(Id) = @Id
             """;
 
-        return await connection.QuerySingleOrDefaultAsync<LocationReadDto>(sql, new { Id = id.ToString() });
+        return await connection.QuerySingleOrDefaultAsync<LocationReadDto>(sql, new { Id = GuidHelper.Up(id) });
     }
 
-    public async Task<PagedResult<LocationListDto>> GetPagedAsync(
+    public async Task<PagedResult<LocationSummaryDto>> GetPagedAsync(
         int page,
         int pageSize,
         Domain.Enums.LocationType? type = null,
@@ -295,9 +305,9 @@ public class LocationReadRepository(IDbConnection connection) : ILocationReadRep
         parameters.Add("Offset", (page - 1) * pageSize);
 
         using var multi = await connection.QueryMultipleAsync(sql, parameters);
-        var items = (await multi.ReadAsync<LocationListDto>()).ToList();
+        var items = (await multi.ReadAsync<LocationSummaryDto>()).ToList();
         var totalCount = await multi.ReadSingleAsync<int>();
 
-        return new PagedResult<LocationListDto>(items, totalCount, page, pageSize);
+        return new PagedResult<LocationSummaryDto>(items, totalCount, page, pageSize);
     }
 }

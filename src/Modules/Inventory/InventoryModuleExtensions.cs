@@ -1,4 +1,5 @@
 using System.Data;
+using Dapper;
 using IMS.Modular.Modules.Inventory.Domain;
 using IMS.Modular.Modules.Inventory.Infrastructure;
 using Microsoft.Data.Sqlite;
@@ -7,10 +8,31 @@ using Microsoft.EntityFrameworkCore;
 namespace IMS.Modular.Modules.Inventory;
 
 /// <summary>
+/// Dapper type handler: maps SQLite TEXT ↔ System.Guid.
+/// Required because SQLite stores GUIDs as TEXT, but Dapper expects the CLR Guid type.
+/// </summary>
+file sealed class GuidTypeHandler : SqlMapper.TypeHandler<Guid>
+{
+    public override void SetValue(IDbDataParameter parameter, Guid value)
+        => parameter.Value = value.ToString().ToUpperInvariant();
+
+    public override Guid Parse(object value)
+        => Guid.Parse(value.ToString()!);
+}
+
+/// <summary>
 /// DI registration and database initialization for the Inventory module.
 /// </summary>
 public static class InventoryModuleExtensions
 {
+    // Register the Dapper type handler once (idempotent — safe to call multiple times).
+    static InventoryModuleExtensions()
+    {
+        SqlMapper.RemoveTypeMap(typeof(Guid));
+        SqlMapper.RemoveTypeMap(typeof(Guid?));
+        SqlMapper.AddTypeHandler(new GuidTypeHandler());
+    }
+
     /// <summary>
     /// Registers all Inventory module services: DbContext, Write repos (EF Core), Read repos (Dapper).
     /// </summary>

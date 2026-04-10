@@ -2,6 +2,7 @@ using FluentValidation;
 using IMS.Modular.Modules.Auth;
 using IMS.Modular.Modules.Auth.Api;
 using IMS.Modular.Modules.Inventory;
+using IMS.Modular.Modules.Inventory.Api;
 using IMS.Modular.Modules.Issues;
 using IMS.Modular.Modules.Issues.Api;
 using IMS.Modular.Shared.Abstractions;
@@ -210,6 +211,7 @@ app.MapGet("/api/status", () => Results.Ok(new
 
 AuthModule.Map(app);
 IssuesModule.Map(app);
+InventoryModule.Map(app);
 
 // ============================================================
 // DATABASE INITIALIZATION
