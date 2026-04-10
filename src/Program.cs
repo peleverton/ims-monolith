@@ -1,8 +1,12 @@
 using FluentValidation;
+using IMS.Modular.Modules.Analytics;
+using IMS.Modular.Modules.Analytics.Api;
 using IMS.Modular.Modules.Auth;
 using IMS.Modular.Modules.Auth.Api;
 using IMS.Modular.Modules.Inventory;
 using IMS.Modular.Modules.Inventory.Api;
+using IMS.Modular.Modules.InventoryIssues;
+using IMS.Modular.Modules.InventoryIssues.Api;
 using IMS.Modular.Modules.Issues;
 using IMS.Modular.Modules.Issues.Api;
 using IMS.Modular.Shared.Abstractions;
@@ -114,6 +118,8 @@ builder.Services.AddCors(options =>
 builder.Services.AddAuthModule(builder.Configuration);
 builder.Services.AddIssuesModule(builder.Configuration);
 builder.Services.AddInventoryModule(builder.Configuration);
+builder.Services.AddInventoryIssuesModule(builder.Configuration);
+builder.Services.AddAnalyticsModule(builder.Configuration);
 
 // ============================================================
 // HEALTH CHECKS (US-007)
@@ -197,8 +203,7 @@ app.MapGet("/api/status", () => Results.Ok(new
 {
     Status = "Running",
     Version = "1.0.0",
-    Environment = app.Environment.EnvironmentName,
-    Modules = new[] { "Auth", "Issues", "Inventory" },
+    Environment = app.Environment.EnvironmentName,        Modules = new[] { "Auth", "Issues", "Inventory", "InventoryIssues", "Analytics" },
     Timestamp = DateTime.UtcNow
 }))
 .WithName("GetStatus")
@@ -212,6 +217,8 @@ app.MapGet("/api/status", () => Results.Ok(new
 AuthModule.Map(app);
 IssuesModule.Map(app);
 InventoryModule.Map(app);
+InventoryIssuesModule.Map(app);
+AnalyticsModule.Map(app);
 
 // ============================================================
 // DATABASE INITIALIZATION
@@ -220,6 +227,7 @@ InventoryModule.Map(app);
 await app.Services.InitializeAuthModuleAsync();
 await app.Services.InitializeIssuesModuleAsync();
 await app.Services.InitializeInventoryModuleAsync();
+await app.Services.InitializeInventoryIssuesModuleAsync();
 
 // ============================================================
 // RUN
