@@ -36,3 +36,6 @@ logs/
 
 # User secrets
 secrets.json
+
+# React BFF App (out of scope)
+my-react-bff-app/
