@@ -70,9 +70,23 @@ public class Product : BaseEntity
     public void AdjustStock(int quantity, StockMovementType movementType)
     {
         var previousStock = CurrentStock;
-        CurrentStock += quantity;
+
+        // Outgoing movements subtract from stock; incoming add.
+        var delta = movementType switch
+        {
+            StockMovementType.StockOut or
+            StockMovementType.Sale     or
+            StockMovementType.Damage   or
+            StockMovementType.Loss     or
+            StockMovementType.Expired  or
+            StockMovementType.Return   => -Math.Abs(quantity),
+            _                          =>  Math.Abs(quantity)   // StockIn, Adjustment, Transfer, InitialStock, etc.
+        };
+
+        CurrentStock += delta;
         if (CurrentStock < 0) CurrentStock = 0;
 
+        UpdatedAt = DateTime.UtcNow;
         RecalculateStockStatus();
 
         AddDomainEvent(new StockChangedEvent(Id, SKU, previousStock, CurrentStock, movementType));
@@ -90,6 +104,7 @@ public class Product : BaseEntity
     {
         AddDomainEvent(new StockTransferInitiatedEvent(Id, SKU, fromLocationId, toLocationId, quantity));
         LocationId = toLocationId;
+        UpdatedAt = DateTime.UtcNow;
         AddDomainEvent(new StockTransferCompletedEvent(Id, SKU, fromLocationId, toLocationId, quantity));
     }
 
@@ -100,6 +115,7 @@ public class Product : BaseEntity
         var previousPrice = UnitPrice;
         UnitPrice = unitPrice;
         CostPrice = costPrice;
+        UpdatedAt = DateTime.UtcNow;
         AddDomainEvent(new PriceChangedEvent(Id, SKU, previousPrice, unitPrice));
     }
 
@@ -109,6 +125,7 @@ public class Product : BaseEntity
     {
         IsActive = false;
         StockStatus = StockStatus.Discontinued;
+        UpdatedAt = DateTime.UtcNow;
         AddDomainEvent(new ProductDiscontinuedEvent(Id, SKU, Name));
     }
 
