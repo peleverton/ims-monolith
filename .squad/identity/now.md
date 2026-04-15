@@ -1,8 +1,41 @@
 ---
 updated_at: 2026-04-14T00:00:00Z
-focus_area: Phase 7 — PostgreSQL Migration (US-024) and Docker Full Stack (US-025)
+focus_area: Phase 7 final — CI/CD Pipeline (US-026) + OpenTelemetry Observability (US-027)
 active_issues: []
 ---
+
+# What We're Focused On
+
+Todas as user stories do projeto concluídas. Branch `feat/us-026-027-cicd-observability`.
+
+## US-026 — CI/CD Pipeline: GitHub Actions Build + Test + Deploy
+
+- **`.github/workflows/ci.yml`**: Trigger em push/PR para `main` e feature branches. Steps: restore → build (Release) → test com cobertura (`XPlat Code Coverage`, Coverlet) → publicar resultado de testes (dorny/test-reporter) → upload para Codecov.
+- **`.github/workflows/cd.yml`**: Trigger em push para `main` e tags semver. Steps: build + test (gate) → Docker Buildx → login GHCR → metadata (tags: latest, sha, semver) → build e push da imagem → step summary.
+- **`tests/IMS.Modular.Tests.csproj`**: Projeto xUnit com xunit 2.9, Moq 4, FluentAssertions 6, EF InMemory 9, coverlet.collector.
+- **Testes (29 passando, 0 falhas)**:
+  - `IssueEntityTests` (14 testes): construção, título, status, assign, comment, domain events
+  - `IssueCommandHandlerTests` (8 testes): create, update, changeStatus, delete — NotFound paths
+  - `ResultTests` (7 testes): todos os factory methods do Result pattern
+  - `OutboxServiceTests` (3 testes): persistência, múltiplas mensagens, tipo de mensagem
+
+## US-027 — OpenTelemetry: Traces, Metrics, Prometheus + Grafana + Jaeger
+
+- **`Shared/Observability/OpenTelemetryExtensions.cs`** (refatorado):
+  - Jaeger exporter (`AddJaegerExporter`) — configurado via `JaegerEndpoint` no appsettings
+  - Correlation-ID propagado para trace tags via `EnrichWithHttpRequest`
+  - Custom metrics: `ims.domain_events.published` (counter), `ims.outbox.processing_duration_ms` (histogram)
+  - Helpers: `RecordDomainEventPublished()`, `RecordOutboxProcessingDuration()`
+- **`docker-compose.observability.yml`**: Adicionado Jaeger All-in-One 1.57 (UDP 6831, UI 16686, OTLP 4317/4318)
+- **`appsettings.Development.json`**: `JaegerEndpoint: http://localhost:6831`
+- **`appsettings.Production.json`**: `OtlpEndpoint: http://jaeger:4317`, `JaegerEndpoint: http://jaeger:6831`
+- **`.env.example`**: `JAEGER_UI_PORT=16686`
+- Prometheus e Grafana já entregues em US-025 (dashboard IMS auto-provisionado)
+
+## Skills Available
+
+All agents should consult `.squad/skills/ims-modular-patterns/SKILL.md` for the skill index.
+
 
 # What We're Focused On
 

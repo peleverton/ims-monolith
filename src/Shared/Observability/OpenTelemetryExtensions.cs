@@ -7,35 +7,33 @@ using OpenTelemetry.Trace;
 namespace IMS.Modular.Shared.Observability;
 
 /// <summary>
-/// Extension methods for registering OpenTelemetry services (traces + metrics + Prometheus exporter).
-/// US-010: Observability — provides distributed tracing and Prometheus-compatible metrics endpoint.
-///
-/// Traces:
-///   • ASP.NET Core instrumentation (HTTP requests)
-///   • HttpClient instrumentation (outbound calls)
-///   • EF Core instrumentation (database queries)
-///   • Custom ActivitySource: "IMS.Modular" for application-level spans
-///
-/// Metrics:
-///   • ASP.NET Core metrics (request count, duration, active connections)
-///   • Runtime metrics (.NET GC, thread pool, etc.)
-///   • Custom Meter: "IMS.Modular.Http" (from MetricsMiddleware)
-///   • Prometheus exporter: /metrics endpoint
-///
-/// All configuration is via appsettings.json → OpenTelemetry section.
+/// US-010 / US-027: OpenTelemetry — distributed tracing, custom metrics, Prometheus, Jaeger.
 /// </summary>
 public static class OpenTelemetryExtensions
 {
     /// <summary>Application-level ActivitySource for custom tracing spans.</summary>
     public static readonly ActivitySource ActivitySource = new("IMS.Modular", "1.0.0");
 
-    /// <summary>Application-level Meter for custom metrics beyond the MetricsMiddleware.</summary>
+    /// <summary>Application-level Meter for custom metrics.</summary>
     public static readonly Meter AppMeter = new("IMS.Modular.App", "1.0.0");
 
-    /// <summary>
-    /// Registers OpenTelemetry tracing and metrics with Prometheus exporter.
-    /// Call in <c>builder.Services.AddImsOpenTelemetry(builder.Configuration)</c>.
-    /// </summary>
+    // US-027: Custom instruments
+    private static readonly Counter<long> _domainEventsPublished =
+        AppMeter.CreateCounter<long>("ims.domain_events.published", "events",
+            "Total domain events published after SaveChanges");
+
+    private static readonly Histogram<double> _outboxProcessingDuration =
+        AppMeter.CreateHistogram<double>("ims.outbox.processing_duration_ms", "ms",
+            "Duration of outbox processing cycles");
+
+    /// <summary>Increments the domain events published counter.</summary>
+    public static void RecordDomainEventPublished(string eventType)
+        => _domainEventsPublished.Add(1, new KeyValuePair<string, object?>("event.type", eventType));
+
+    /// <summary>Records outbox processing cycle duration in milliseconds.</summary>
+    public static void RecordOutboxProcessingDuration(double milliseconds)
+        => _outboxProcessingDuration.Record(milliseconds);
+
     public static IServiceCollection AddImsOpenTelemetry(
         this IServiceCollection services,
         IConfiguration configuration)
@@ -62,7 +60,6 @@ public static class OpenTelemetryExtensions
                 tracing
                     .AddAspNetCoreInstrumentation(options =>
                     {
-                        // Filter out health check and metrics endpoints to reduce noise
                         options.Filter = httpContext =>
                         {
                             var path = httpContext.Request.Path.Value ?? "";
@@ -70,23 +67,35 @@ public static class OpenTelemetryExtensions
                                 && !path.StartsWith("/metrics", StringComparison.OrdinalIgnoreCase)
                                 && !path.StartsWith("/swagger", StringComparison.OrdinalIgnoreCase);
                         };
-
                         options.RecordException = true;
+                        // US-027: propagate Correlation-ID into trace
+                        options.EnrichWithHttpRequest = (activity, request) =>
+                        {
+                            if (request.Headers.TryGetValue("X-Correlation-Id", out var corrId))
+                                activity.SetTag("ims.correlation_id", corrId.ToString());
+                        };
                     })
-                    .AddHttpClientInstrumentation(options =>
+                    .AddHttpClientInstrumentation(options => options.RecordException = true)
+                    .AddSource(ActivitySource.Name);
+
+                // Jaeger exporter (US-027)
+                var jaegerEndpoint = section.GetValue<string>("JaegerEndpoint");
+                if (!string.IsNullOrWhiteSpace(jaegerEndpoint))
+                {
+                    tracing.AddJaegerExporter(options =>
                     {
-                        options.RecordException = true;
-                    })
-                    .AddSource(ActivitySource.Name); // Register custom ActivitySource
+                        var uri = new Uri(jaegerEndpoint);
+                        options.AgentHost = uri.Host;
+                        options.AgentPort = uri.Port;
+                    });
+                }
 
-                // OTLP exporter (if endpoint is configured)
+                // OTLP exporter
                 var otlpEndpoint = section.GetValue<string>("OtlpEndpoint");
                 if (!string.IsNullOrWhiteSpace(otlpEndpoint))
                 {
                     tracing.AddOtlpExporter(options =>
-                    {
-                        options.Endpoint = new Uri(otlpEndpoint);
-                    });
+                        options.Endpoint = new Uri(otlpEndpoint));
                 }
             })
             .WithMetrics(metrics =>
@@ -95,33 +104,23 @@ public static class OpenTelemetryExtensions
                     .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
                     .AddRuntimeInstrumentation()
-                    .AddMeter("IMS.Modular.Http")   // MetricsMiddleware meter
-                    .AddMeter(AppMeter.Name)         // Application-level custom meter
-                    .AddPrometheusExporter();         // /metrics endpoint
+                    .AddMeter("IMS.Modular.Http")
+                    .AddMeter(AppMeter.Name)
+                    .AddPrometheusExporter();
             });
 
         return services;
     }
 
-    /// <summary>
-    /// Maps the Prometheus scraping endpoint at /metrics.
-    /// Call in the middleware pipeline: <c>app.MapImsMetrics()</c>.
-    /// </summary>
     public static WebApplication MapImsMetrics(this WebApplication app)
     {
         app.MapPrometheusScrapingEndpoint("/metrics")
             .AllowAnonymous()
-            .ExcludeFromDescription(); // Hide from Swagger
-
+            .ExcludeFromDescription();
         return app;
     }
 
-    /// <summary>
-    /// Creates a custom activity (span) for tracing application-level operations.
-    /// Usage: <c>using var activity = OpenTelemetryExtensions.StartActivity("ProcessOrder");</c>
-    /// </summary>
+    /// <summary>Creates a custom activity (span) for application-level tracing.</summary>
     public static Activity? StartActivity(string name, ActivityKind kind = ActivityKind.Internal)
-    {
-        return ActivitySource.StartActivity(name, kind);
-    }
+        => ActivitySource.StartActivity(name, kind);
 }

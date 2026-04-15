@@ -1,0 +1,90 @@
+# =============================================================
+# US-026: CI — Build, Test & Coverage
+# =============================================================
+# Triggered on:
+#   - Every push / PR to main or any feature branch
+#   - Manual trigger (workflow_dispatch)
+#
+# Jobs:
+#   1. build-and-test  — restore, build, test with coverage
+# =============================================================
+
+name: CI — Build & Test
+
+on:
+  push:
+    branches: ["main", "feat/**", "fix/**", "chore/**"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: "9.0.x"
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  build-and-test:
+    name: Build & Test (.NET ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+
+    steps:
+      # ── Checkout ──────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── Setup .NET ────────────────────────────────────────
+      - name: Setup .NET ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      # ── Cache NuGet ───────────────────────────────────────
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      # ── Restore ───────────────────────────────────────────
+      - name: Restore dependencies
+        run: dotnet restore ims-monolith.sln
+
+      # ── Build ─────────────────────────────────────────────
+      - name: Build (Release)
+        run: dotnet build ims-monolith.sln -c Release --no-restore
+
+      # ── Test + Coverage ───────────────────────────────────
+      - name: Run tests with coverage
+        run: |
+          dotnet test tests/IMS.Modular.Tests.csproj \
+            -c Release \
+            --no-build \
+            --logger "trx;LogFileName=test-results.trx" \
+            --collect:"XPlat Code Coverage" \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+
+      # ── Publish test results ──────────────────────────────
+      - name: Publish test results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: xUnit Tests
+          path: "**/test-results.trx"
+          reporter: dotnet-trx
+          fail-on-error: true
+
+      # ── Upload coverage ───────────────────────────────────
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          files: "**/coverage.opencover.xml"
+          flags: unittests
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
