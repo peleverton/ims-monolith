@@ -1,0 +1,85 @@
+# =============================================================
+# US-035: Dockerfile.frontend — IMS Frontend (Next.js + Blazor)
+# =============================================================
+# Stages:
+#   1. blazor-build  — dotnet publish Blazor WASM
+#   2. nextjs-deps   — npm ci (cache de dependências)
+#   3. nextjs-build  — npm run build com artefatos Blazor
+#   4. runner        — imagem final standalone com Node.js
+# =============================================================
+
+# ── 1. Blazor WASM publish ────────────────────────────────────
+FROM mcr.microsoft.com/dotnet/sdk:9.0-alpine AS blazor-build
+
+WORKDIR /app
+
+COPY frontend/apps/blazor-modules/ ./frontend/apps/blazor-modules/
+
+RUN dotnet publish frontend/apps/blazor-modules \
+    -c Release \
+    -o /blazor-publish \
+    --nologo
+
+# ── 2. Next.js deps (cache layer) ────────────────────────────
+FROM node:20-alpine AS nextjs-deps
+
+WORKDIR /app
+
+COPY frontend/apps/next-shell/package.json frontend/apps/next-shell/package-lock.json ./
+
+RUN npm ci --prefer-offline
+
+# ── 3. Next.js build ─────────────────────────────────────────
+FROM node:20-alpine AS nextjs-build
+
+WORKDIR /app
+
+# Copy dependencies
+COPY --from=nextjs-deps /app/node_modules ./node_modules
+
+# Copy source
+COPY frontend/apps/next-shell/ .
+
+# Copy Blazor WASM artifacts into public/_blazor/
+COPY --from=blazor-build /blazor-publish/wwwroot ./public/_blazor/
+
+# Build args → env vars em build time
+ARG NEXTAUTH_SECRET
+ARG NEXTAUTH_URL=http://localhost:3000
+ARG NEXT_PUBLIC_API_URL=http://localhost:5049
+
+ENV NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+ENV NEXTAUTH_URL=${NEXTAUTH_URL}
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+
+# Next.js standalone output
+ENV NEXT_TELEMETRY_DISABLED=1
+
+RUN npm run build
+
+# ── 4. Runner — imagem final ──────────────────────────────────
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Security: non-root user
+RUN addgroup -S ims && adduser -S ims -G ims
+
+# Copiar apenas o necessário do standalone build
+COPY --from=nextjs-build --chown=ims:ims /app/public ./public
+COPY --from=nextjs-build --chown=ims:ims /app/.next/standalone ./
+COPY --from=nextjs-build --chown=ims:ims /app/.next/static ./.next/static
+
+USER ims
+
+EXPOSE 3000
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+    CMD wget -qO- http://localhost:3000/api/health || exit 1
+
+CMD ["node", "server.js"]
