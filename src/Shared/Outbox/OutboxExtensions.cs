@@ -1,3 +1,4 @@
+using IMS.Modular.Shared.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -5,23 +6,20 @@ using Microsoft.Extensions.DependencyInjection;
 namespace IMS.Modular.Shared.Outbox;
 
 /// <summary>
-/// US-023: Extensões de DI para o padrão Outbox.
+/// US-023 / US-024: Extensões de DI para o padrão Outbox.
 /// </summary>
 public static class OutboxExtensions
 {
-    /// <summary>
-    /// Registra o OutboxDbContext, IOutboxService e OutboxProcessor (background service).
-    /// Usa o mesmo banco SQLite do projeto (connection string "DefaultConnection").
-    /// </summary>
     public static IServiceCollection AddImsOutbox(
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("DefaultConnection")
-            ?? "Data Source=ims-monolith.db";
-
-        services.AddDbContext<OutboxDbContext>(options =>
-            options.UseSqlite(connectionString));
+        // US-024: provider selecionado por ambiente (SQLite dev / PostgreSQL prod)
+        services.AddDbContext<OutboxDbContext>((sp, options) =>
+        {
+            var env = sp.GetRequiredService<IWebHostEnvironment>();
+            options.UseImsDatabase(configuration, env);
+        });
 
         services.Configure<OutboxOptions>(
             configuration.GetSection(OutboxOptions.SectionName));
