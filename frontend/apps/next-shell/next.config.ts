@@ -3,6 +3,8 @@ import type { NextConfig } from "next";
 const IMS_API_URL = process.env.IMS_API_URL ?? "http://localhost:5049";
 
 const nextConfig: NextConfig = {
+  // Habilita output standalone para Docker (copia apenas os arquivos necessários)
+  output: "standalone",
   async rewrites() {
     return [
       {
