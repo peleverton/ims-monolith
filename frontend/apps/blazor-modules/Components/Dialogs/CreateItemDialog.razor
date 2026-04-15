@@ -1,0 +1,36 @@
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6"><MudIcon Icon="@Icons.Material.Filled.Add" Class="mr-2" />Novo Item</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_request">
+            <MudGrid>
+                <MudItem xs="12" sm="8">
+                    <MudTextField @bind-Value="_request.Name" Label="Nome" Required="true" RequiredError="Nome obrigatório" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudTextField @bind-Value="_request.Sku" Label="SKU" Required="true" RequiredError="SKU obrigatório" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudNumericField @bind-Value="_request.Quantity" Label="Quantidade" Min="0" Required="true" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudNumericField @bind-Value="_request.UnitPrice" Label="Preço Unitário" Format="F2" Min="0" Required="true" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudNumericField @bind-Value="_request.ReorderPoint" Label="Ponto de Reposição" Min="0" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_request.Location" Label="Localização" Placeholder="Ex: A1-01" />
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancelar</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit" Disabled="_saving">
+            @if (_saving) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+            Criar
+        </MudButton>
+    </DialogActions>
+</MudDialog>
