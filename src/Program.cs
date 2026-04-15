@@ -9,6 +9,9 @@ using IMS.Modular.Modules.InventoryIssues;
 using IMS.Modular.Modules.InventoryIssues.Api;
 using IMS.Modular.Modules.Issues;
 using IMS.Modular.Modules.Issues.Api;
+using IMS.Modular.Modules.Notifications;
+using IMS.Modular.Modules.UserManagement;
+using IMS.Modular.Modules.UserManagement.Api;
 using IMS.Modular.Shared.Abstractions;
 using IMS.Modular.Shared.Behaviors;
 using IMS.Modular.Shared.Caching;
@@ -109,6 +112,13 @@ builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
         policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
+
+    // SignalR requires AllowCredentials — cannot use AllowAnyOrigin with it
+    options.AddPolicy("SignalR", policy =>
+        policy.WithOrigins("http://localhost:3000", "http://localhost:5173")
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials());
 });
 
 // ============================================================
@@ -120,6 +130,8 @@ builder.Services.AddIssuesModule(builder.Configuration);
 builder.Services.AddInventoryModule(builder.Configuration);
 builder.Services.AddInventoryIssuesModule(builder.Configuration);
 builder.Services.AddAnalyticsModule(builder.Configuration);
+builder.Services.AddUserManagementModule(builder.Configuration);   // US-019
+builder.Services.AddNotificationsModule(builder.Configuration);    // US-020
 
 // ============================================================
 // HEALTH CHECKS (US-007)
@@ -203,7 +215,7 @@ app.MapGet("/api/status", () => Results.Ok(new
 {
     Status = "Running",
     Version = "1.0.0",
-    Environment = app.Environment.EnvironmentName,        Modules = new[] { "Auth", "Issues", "Inventory", "InventoryIssues", "Analytics" },
+    Environment = app.Environment.EnvironmentName,        Modules = new[] { "Auth", "Issues", "Inventory", "InventoryIssues", "Analytics", "UserManagement", "Notifications" },
     Timestamp = DateTime.UtcNow
 }))
 .WithName("GetStatus")
@@ -219,6 +231,8 @@ IssuesModule.Map(app);
 InventoryModule.Map(app);
 InventoryIssuesModule.Map(app);
 AnalyticsModule.Map(app);
+UserManagementModule.Map(app);        // US-019
+app.MapNotificationsEndpoints();      // US-020 (SignalR Hub)
 
 // ============================================================
 // DATABASE INITIALIZATION
@@ -228,6 +242,7 @@ await app.Services.InitializeAuthModuleAsync();
 await app.Services.InitializeIssuesModuleAsync();
 await app.Services.InitializeInventoryModuleAsync();
 await app.Services.InitializeInventoryIssuesModuleAsync();
+await app.Services.InitializeUserManagementModuleAsync();  // US-019
 
 // ============================================================
 // RUN

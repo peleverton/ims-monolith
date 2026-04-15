@@ -822,7 +822,7 @@ This project uses **Squad**, an AI team framework for collaborative development 
 | **2. Cross-Cutting Hardening** | 🔜 Next | Pipeline behaviors (Validation, Logging, Caching), middleware (CorrelationId, Metrics, Performance, UserContext), global error handling, Serilog, health checks, Redis cache, output caching, rate limiting |
 | **3. Inventory Module** | 📋 Planned | Products (CRUD, stock, pricing, SKU, categories), Stock Movements (15 types, bulk, transfer), Suppliers (credit, payment terms), Locations (hierarchical, capacity), Inventory Analytics (13 endpoints) |
 | **4. Inventory Issues + Analytics** | 📋 Planned | Inventory-specific issue tracking (16 endpoints), comprehensive issue/user analytics, dashboard KPIs, workload-based auto-assignment, export (JSON/CSV/PDF) |
-| **5. User Management + Notifications** | 📋 Planned | Full user lifecycle (profile, roles, activate/deactivate), SignalR real-time notifications, SMTP email, message bus |
+| **5. User Management + Notifications** | ✅ Done | Full user lifecycle (profile, roles, activate/deactivate), SignalR real-time notifications, SMTP email, message bus |
 | **6. Integration & Messaging** | 📋 Planned | Domain events (MediatR INotification), RabbitMQ full implementation, outbox pattern, Polly retry policies |
 | **7. Production** | 📋 Planned | PostgreSQL, Docker + Compose (PostgreSQL, Redis, RabbitMQ, Prometheus, Grafana), CI/CD, OpenTelemetry, feature flags |
 | **8. Extraction** | 🔮 Future | Extract modules into independent services if scale requires |
