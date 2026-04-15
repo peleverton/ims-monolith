@@ -77,7 +77,7 @@ jobs:
       # ── Test + Coverage ───────────────────────────────────
       - name: Run tests with coverage
         run: |
-          dotnet test tests/IMS.Modular.Tests.csproj \
+          dotnet test backend/tests/IMS.Modular.Tests.csproj \
             -c Release \
             --no-build \
             --logger "trx;LogFileName=test-results.trx" \
@@ -103,3 +103,76 @@ jobs:
           flags: unittests
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
+
+  # ============================================================
+  # Job 2: Build Blazor WASM
+  # ============================================================
+  build-blazor:
+    name: Build Blazor WASM
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-blazor-${{ hashFiles('frontend/apps/blazor-modules/**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-blazor-
+
+      - name: Publish Blazor WASM
+        run: |
+          dotnet publish frontend/apps/blazor-modules \
+            -c Release \
+            -o frontend/apps/blazor-modules/publish \
+            --nologo
+
+      - name: Upload Blazor artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: blazor-wwwroot
+          path: frontend/apps/blazor-modules/publish/wwwroot
+          retention-days: 1
+
+  # ============================================================
+  # Job 3: Build Next.js (com artefatos Blazor)
+  # ============================================================
+  build-nextjs:
+    name: Build Next.js Shell
+    runs-on: ubuntu-latest
+    needs: build-blazor
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/apps/next-shell/package-lock.json
+
+      - name: Download Blazor artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: blazor-wwwroot
+          path: frontend/apps/next-shell/public/_blazor
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: frontend/apps/next-shell
+
+      - name: Build Next.js
+        run: npm run build
+        working-directory: frontend/apps/next-shell
+        env:
+          NEXTAUTH_SECRET: ci-secret-placeholder
+          NEXTAUTH_URL: http://localhost:3000
+          NEXT_PUBLIC_API_URL: http://localhost:5049

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { Sidebar } from "@/components/sidebar";
+import { BlazorHost } from "@/components/blazor-host";
 
 export default async function DashboardLayout({
   children,
@@ -16,6 +17,8 @@ export default async function DashboardLayout({
       <main className="flex-1 overflow-y-auto">
         <div className="p-6 max-w-7xl mx-auto">{children}</div>
       </main>
+      {/* Blazor WASM runtime — carregado lazy uma única vez no layout */}
+      <BlazorHost />
     </div>
   );
 }
