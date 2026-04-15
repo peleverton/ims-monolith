@@ -17,3 +17,6 @@
 !.env.example
 docker-compose*.yml
 Dockerfile
+
+# Frontend (não entra na imagem do backend)
+frontend/

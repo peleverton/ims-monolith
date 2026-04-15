@@ -9,20 +9,20 @@
 
 # ── 1. Restore ───────────────────────────────────────────────
 FROM mcr.microsoft.com/dotnet/sdk:9.0-alpine AS restore
-WORKDIR /src
+WORKDIR /app
 
 # Copy only csproj first — leverage Docker layer cache for nuget restore
-COPY src/*.csproj ./
-RUN dotnet restore --locked-mode || dotnet restore
+COPY backend/src/*.csproj ./backend/src/
+RUN dotnet restore --locked-mode backend/src/*.csproj || dotnet restore backend/src/*.csproj
 
 # ── 2. Build ─────────────────────────────────────────────────
 FROM restore AS build
-WORKDIR /src
+WORKDIR /app
 
 # Copy full source
-COPY src/ ./
+COPY backend/src/ ./backend/src/
 
-RUN dotnet build -c Release --no-restore -o /build
+RUN dotnet build -c Release --no-restore -o /build backend/src/*.csproj
 
 # ── 3. Publish ───────────────────────────────────────────────
 FROM build AS publish
