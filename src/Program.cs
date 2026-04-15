@@ -15,6 +15,8 @@ using IMS.Modular.Shared.Caching;
 using IMS.Modular.Shared.HealthChecks;
 using IMS.Modular.Shared.Middleware;
 using IMS.Modular.Shared.Observability;
+using IMS.Modular.Shared.Messaging;
+using IMS.Modular.Shared.Outbox;
 using IMS.Modular.Shared.RateLimiting;
 using MediatR;
 using Microsoft.OpenApi.Models;
@@ -110,6 +112,18 @@ builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy =>
         policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
 });
+
+// ============================================================
+// MESSAGING (US-023: RabbitMQ Message Bus)
+// ============================================================
+
+builder.Services.AddImsMessaging(builder.Configuration);
+
+// ============================================================
+// OUTBOX (US-023: Outbox pattern — reliable event publishing)
+// ============================================================
+
+builder.Services.AddImsOutbox(builder.Configuration);
 
 // ============================================================
 // MODULE REGISTRATION

@@ -1,13 +1,13 @@
 using IMS.Modular.Modules.Issues.Domain.Entities;
-using IMS.Modular.Modules.Issues.Domain.ValueObjects;
 using IMS.Modular.Shared.Domain;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace IMS.Modular.Modules.Issues.Infrastructure;
 
+// US-022: herda BaseDbContext — SaveChangesAsync com domain event dispatch centralizado
 public class IssuesDbContext(DbContextOptions<IssuesDbContext> options, IMediator mediator)
-    : DbContext(options)
+    : BaseDbContext(options, mediator)
 {
     public DbSet<Issue> Issues => Set<Issue>();
 
@@ -19,12 +19,10 @@ public class IssuesDbContext(DbContextOptions<IssuesDbContext> options, IMediato
         {
             entity.ToTable("Issues");
             entity.HasKey(e => e.Id);
-
             entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
             entity.Property(e => e.Description).IsRequired().HasMaxLength(4000);
             entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(20);
             entity.Property(e => e.Priority).HasConversion<string>().HasMaxLength(20);
-
             entity.HasIndex(e => e.Status);
             entity.HasIndex(e => e.Priority);
             entity.HasIndex(e => e.AssigneeId);
@@ -58,28 +56,5 @@ public class IssuesDbContext(DbContextOptions<IssuesDbContext> options, IMediato
 
             entity.Ignore(e => e.DomainEvents);
         });
-    }
-
-    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
-    {
-        // Collect domain events before saving
-        var domainEntities = ChangeTracker
-            .Entries<BaseEntity>()
-            .Where(e => e.Entity.DomainEvents.Any())
-            .ToList();
-
-        var domainEvents = domainEntities
-            .SelectMany(e => e.Entity.DomainEvents)
-            .ToList();
-
-        var result = await base.SaveChangesAsync(cancellationToken);
-
-        // Clear and publish after successful save
-        domainEntities.ForEach(e => e.Entity.ClearDomainEvents());
-
-        foreach (var domainEvent in domainEvents)
-            await mediator.Publish(domainEvent, cancellationToken);
-
-        return result;
     }
 }
