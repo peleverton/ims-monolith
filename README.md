@@ -192,12 +192,54 @@ ims-modular/
 
 - [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
 - A terminal (bash, zsh, PowerShell)
+- [Docker](https://www.docker.com/) (optional, for full-stack local dev)
 
-### Run
+### Run (local — SQLite, sem Docker)
 
 ```bash
-cd ims-modular
+cd src
 dotnet restore
+dotnet build
+dotnet run --urls http://localhost:5049
+```
+
+The API will be available at **http://localhost:5049**.
+
+Swagger UI: **http://localhost:5049**
+
+### Run (local — com Docker Compose: RabbitMQ + Redis)
+
+```bash
+# Sobe RabbitMQ + Redis para desenvolvimento
+docker compose -f docker-compose.dev.yml up -d
+
+# Roda a aplicação em modo Development (SQLite)
+dotnet run --project src/ims-monolith.csproj --urls http://localhost:5049
+```
+
+### Deploy (full-stack com Docker Compose)
+
+```bash
+# 1. Configure as variáveis de ambiente
+cp .env.example .env
+# edite .env com suas credenciais
+
+# 2. Suba toda a stack (app + PostgreSQL + Redis + RabbitMQ)
+docker compose up -d
+
+# 3. Overlay opcional de observabilidade (Prometheus + Grafana)
+docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
+```
+
+| Serviço | URL |
+|---|---|
+| API | http://localhost:8080 |
+| Swagger | http://localhost:8080/swagger |
+| RabbitMQ UI | http://localhost:15672 |
+| Grafana | http://localhost:3000 |
+| Prometheus | http://localhost:9090 |
+
+
 dotnet build
 dotnet run
 ```

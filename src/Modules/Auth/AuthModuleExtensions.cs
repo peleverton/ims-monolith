@@ -1,5 +1,6 @@
 using IMS.Modular.Modules.Auth.Application.Services;
 using IMS.Modular.Modules.Auth.Infrastructure;
+using IMS.Modular.Shared.Database;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -11,11 +12,13 @@ public static class AuthModuleExtensions
 {
     public static IServiceCollection AddAuthModule(this IServiceCollection services, IConfiguration configuration)
     {
-        // DbContext
-        services.AddDbContext<AuthDbContext>(options =>
-            options.UseSqlite(
-                configuration.GetConnectionString("DefaultConnection"),
-                b => b.MigrationsAssembly(typeof(AuthDbContext).Assembly.FullName)));
+        // DbContext — US-024: SQLite (dev) or PostgreSQL (staging/prod)
+        services.AddDbContext<AuthDbContext>((sp, options) =>
+        {
+            var env = sp.GetRequiredService<IWebHostEnvironment>();
+            options.UseImsDatabase(configuration, env,
+                migrationsAssembly: typeof(AuthDbContext).Assembly.FullName);
+        });
 
         // Services
         services.AddSingleton<JwtTokenService>();
@@ -63,6 +66,11 @@ public static class AuthModuleExtensions
     {
         using var scope = services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
-        await db.Database.EnsureCreatedAsync();
+        var env = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
+
+        if (env.IsDevelopment())
+            await db.Database.EnsureCreatedAsync();
+        else
+            await db.Database.MigrateAsync();
     }
 }
