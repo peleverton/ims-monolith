@@ -1,0 +1,38 @@
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6"><MudIcon Icon="@Icons.Material.Filled.Edit" Class="mr-2" />Editar Item</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form">
+            <MudGrid>
+                <MudItem xs="12" sm="8">
+                    <MudTextField @bind-Value="_name" Label="Nome" Required="true" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudNumericField @bind-Value="_quantity" Label="Quantidade" Min="0" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField @bind-Value="_unitPrice" Label="Preço Unitário" Format="F2" Min="0" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_location" Label="Localização" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudSelect @bind-Value="_status" Label="Status">
+                        @foreach (ProductStatus s in Enum.GetValues<ProductStatus>())
+                        {
+                            <MudSelectItem Value="s">@s</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancelar</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit" Disabled="_saving">
+            @if (_saving) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+            Salvar
+        </MudButton>
+    </DialogActions>
+</MudDialog>
