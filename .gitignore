@@ -36,3 +36,13 @@ logs/
 
 # User secrets
 secrets.json
+
+# Frontend — Next.js
+frontend/apps/next-shell/.next/
+frontend/apps/next-shell/node_modules/
+frontend/apps/next-shell/.env.local
+
+# Frontend — Blazor WASM
+frontend/apps/blazor-modules/bin/
+frontend/apps/blazor-modules/obj/
+frontend/apps/blazor-modules/wwwroot/_framework/
