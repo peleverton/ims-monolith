@@ -5,8 +5,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace IMS.Modular.Modules.InventoryIssues.Infrastructure;
 
+// US-022: herda BaseDbContext — SaveChangesAsync com domain event dispatch centralizado
 public class InventoryIssuesDbContext(DbContextOptions<InventoryIssuesDbContext> options, IMediator mediator)
-    : DbContext(options)
+    : BaseDbContext(options, mediator)
 {
     public DbSet<InventoryIssue> InventoryIssues => Set<InventoryIssue>();
 
@@ -39,26 +40,5 @@ public class InventoryIssuesDbContext(DbContextOptions<InventoryIssuesDbContext>
 
             entity.Ignore(e => e.DomainEvents);
         });
-    }
-
-    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
-    {
-        var domainEntities = ChangeTracker
-            .Entries<BaseEntity>()
-            .Where(e => e.Entity.DomainEvents.Any())
-            .ToList();
-
-        var domainEvents = domainEntities
-            .SelectMany(e => e.Entity.DomainEvents)
-            .ToList();
-
-        var result = await base.SaveChangesAsync(cancellationToken);
-
-        domainEntities.ForEach(e => e.Entity.ClearDomainEvents());
-
-        foreach (var domainEvent in domainEvents)
-            await mediator.Publish(domainEvent, cancellationToken);
-
-        return result;
     }
 }
