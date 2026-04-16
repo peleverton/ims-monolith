@@ -17,6 +17,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { LocaleSwitcher } from "./locale-switcher";
+import { ThemeToggle } from "./theme-toggle";
 import { broadcastLogout } from "@/lib/session-sync";
 
 export function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
@@ -74,8 +75,9 @@ export function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
         ))}
       </ul>
 
-      <div className="px-3 py-2 border-t border-slate-700">
+      <div className="px-3 py-2 border-t border-slate-700 flex items-center justify-between">
         <LocaleSwitcher />
+        <ThemeToggle />
       </div>
 
       <div className="px-3 py-4">
