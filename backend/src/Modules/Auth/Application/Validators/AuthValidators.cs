@@ -43,3 +43,25 @@ public sealed class RegisterRequestValidator : AbstractValidator<RegisterRequest
             .Length(2, 200).WithMessage("Full name must be between 2 and 200 characters");
     }
 }
+
+// ── US-040 Admin Validators ────────────────────────────────────────────────────
+
+public sealed class UpdateUserRoleRequestValidator : AbstractValidator<UpdateUserRoleRequest>
+{
+    public UpdateUserRoleRequestValidator()
+    {
+        RuleFor(x => x.RoleName).NotEmpty().MaximumLength(50);
+    }
+}
+
+public sealed class InviteUserRequestValidator : AbstractValidator<InviteUserRequest>
+{
+    public InviteUserRequestValidator()
+    {
+        RuleFor(x => x.Username).NotEmpty().Length(3, 50)
+            .Matches("^[a-zA-Z0-9_]+$").WithMessage("Username can only contain letters, numbers, and underscores");
+        RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(255);
+        RuleFor(x => x.FullName).NotEmpty().Length(2, 200);
+        RuleFor(x => x.Role).NotEmpty().MaximumLength(50);
+    }
+}

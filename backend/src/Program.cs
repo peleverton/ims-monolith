@@ -229,6 +229,7 @@ app.MapGet("/api/status", () => Results.Ok(new
 // ============================================================
 
 AuthModule.Map(app);
+UserAdminModule.Map(app);
 IssuesModule.Map(app);
 InventoryModule.Map(app);
 InventoryIssuesModule.Map(app);

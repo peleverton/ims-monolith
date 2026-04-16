@@ -11,6 +11,7 @@ import {
   LogOut,
   Menu,
   X,
+  Users,
 } from "lucide-react";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
@@ -18,7 +19,7 @@ import { cn } from "@/lib/utils";
 import { LocaleSwitcher } from "./locale-switcher";
 import { broadcastLogout } from "@/lib/session-sync";
 
-export function Sidebar() {
+export function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -30,6 +31,9 @@ export function Sidebar() {
     { href: "/issues", label: t("issues"), icon: AlertCircle },
     { href: "/inventory", label: t("inventory"), icon: Package },
     { href: "/analytics", label: t("analytics"), icon: BarChart3 },
+    ...(isAdmin
+      ? [{ href: "/admin/users", label: t("users"), icon: Users }]
+      : []),
   ];
 
   const handleLogout = async () => {
