@@ -1,0 +1,118 @@
+{
+  "common": {
+    "appName": "IMS — Inventory Management System",
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "confirm": "Confirm",
+    "back": "Back",
+    "search": "Search",
+    "filter": "Filter",
+    "actions": "Actions",
+    "status": "Status",
+    "noResults": "No results found.",
+    "error": "An error occurred. Please try again.",
+    "success": "Operation completed successfully!"
+  },
+  "auth": {
+    "login": {
+      "title": "Sign in to your account",
+      "username": "Username",
+      "usernamePlaceholder": "your.username",
+      "password": "Password",
+      "passwordPlaceholder": "••••••••",
+      "submit": "Sign in",
+      "submitting": "Signing in...",
+      "noAccount": "Don't have an account?",
+      "registerLink": "Sign up",
+      "errorCredentials": "Invalid username or password",
+      "successLogin": "Login successful!",
+      "sessionExpired": "Your session has expired. Please sign in again.",
+      "usernameMin": "Minimum 3 characters",
+      "passwordMin": "Minimum 6 characters"
+    },
+    "register": {
+      "title": "Create a new account",
+      "name": "Name",
+      "namePlaceholder": "Your full name",
+      "username": "Username",
+      "usernamePlaceholder": "your.username",
+      "email": "Email",
+      "emailPlaceholder": "you@example.com",
+      "password": "Password",
+      "passwordPlaceholder": "Minimum 6 characters",
+      "submit": "Sign up",
+      "submitting": "Creating account...",
+      "hasAccount": "Already have an account?",
+      "loginLink": "Sign in",
+      "successRegister": "Account created successfully!",
+      "errorConflict": "Email or username already taken"
+    },
+    "logout": {
+      "success": "Session ended"
+    }
+  },
+  "nav": {
+    "issues": "Issues",
+    "inventory": "Inventory",
+    "analytics": "Analytics",
+    "logout": "Sign out",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
+  },
+  "issues": {
+    "title": "Issues",
+    "subtitle": "Ticket and problem management",
+    "newIssue": "New Issue",
+    "searchPlaceholder": "Search issues...",
+    "status": {
+      "Open": "Open",
+      "InProgress": "In Progress",
+      "Resolved": "Resolved",
+      "Closed": "Closed"
+    },
+    "priority": {
+      "Low": "Low",
+      "Medium": "Medium",
+      "High": "High",
+      "Critical": "Critical"
+    },
+    "fields": {
+      "title": "Title",
+      "description": "Description",
+      "status": "Status",
+      "priority": "Priority",
+      "assignee": "Assignee",
+      "createdAt": "Created at",
+      "updatedAt": "Updated at"
+    },
+    "form": {
+      "titlePlaceholder": "Issue title",
+      "descriptionPlaceholder": "Describe the problem in detail...",
+      "submit": "Create Issue",
+      "submitting": "Creating...",
+      "titleRequired": "Title is required",
+      "titleMin": "Minimum 5 characters"
+    },
+    "empty": "No issues found.",
+    "errorLoad": "Failed to load issues."
+  },
+  "inventory": {
+    "title": "Inventory",
+    "subtitle": "Interactive grid powered by MudBlazor",
+    "blazorLoading": "Loading Blazor component..."
+  },
+  "analytics": {
+    "title": "Analytics",
+    "subtitle": "KPIs and charts powered by MudBlazor",
+    "blazorLoading": "Loading Blazor component..."
+  },
+  "locale": {
+    "label": "Language",
+    "pt": "Português",
+    "en": "English"
+  }
+}
