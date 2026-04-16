@@ -1,26 +1,49 @@
 @import "tailwindcss";
 
+/* ── Design tokens ────────────────────────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Backgrounds */
+  --bg-app:       #f3f4f6;
+  --bg-surface:   #ffffff;
+  --bg-subtle:    #f9fafb;
+
+  /* Borders */
+  --border:       #e5e7eb;
+  --border-input: #d1d5db;
+
+  /* Text */
+  --text-primary:   #111827;
+  --text-secondary: #6b7280;
+  --text-muted:     #9ca3af;
+
+  /* Sidebar */
+  --sidebar-bg:      #0f172a;
+  --sidebar-border:  #1e293b;
+  --sidebar-text:    #cbd5e1;
+  --sidebar-active:  #2563eb;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+.dark {
+  --bg-app:       #0f172a;
+  --bg-surface:   #1e293b;
+  --bg-subtle:    #162032;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --border:       #334155;
+  --border-input: #475569;
+
+  --text-primary:   #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted:     #64748b;
+
+  --sidebar-bg:      #020617;
+  --sidebar-border:  #0f172a;
+  --sidebar-text:    #94a3b8;
+  --sidebar-active:  #3b82f6;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  font-family: var(--font-sans, Arial, Helvetica, sans-serif);
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
