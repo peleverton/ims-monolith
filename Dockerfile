@@ -22,12 +22,12 @@ WORKDIR /app
 # Copy full source
 COPY backend/src/ ./backend/src/
 
-RUN dotnet build -c Release --no-restore -o /build backend/src/*.csproj
+RUN dotnet build -c Release --no-restore backend/src/*.csproj
 
 # ── 3. Publish ───────────────────────────────────────────────
 FROM build AS publish
 
-RUN dotnet publish -c Release --no-build -o /publish \
+RUN dotnet publish -c Release --no-restore -o /publish \
     /p:UseAppHost=false backend/src/*.csproj
 
 # ── 4. Runtime ───────────────────────────────────────────────
