@@ -28,7 +28,7 @@ RUN dotnet build -c Release --no-restore -o /build backend/src/*.csproj
 FROM build AS publish
 
 RUN dotnet publish -c Release --no-build -o /publish \
-    /p:UseAppHost=false
+    /p:UseAppHost=false backend/src/*.csproj
 
 # ── 4. Runtime ───────────────────────────────────────────────
 FROM mcr.microsoft.com/dotnet/aspnet:9.0-alpine AS runtime
