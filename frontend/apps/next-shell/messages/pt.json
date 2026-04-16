@@ -1,0 +1,118 @@
+{
+  "common": {
+    "appName": "IMS — Inventory Management System",
+    "loading": "Carregando...",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "delete": "Excluir",
+    "edit": "Editar",
+    "create": "Criar",
+    "confirm": "Confirmar",
+    "back": "Voltar",
+    "search": "Buscar",
+    "filter": "Filtrar",
+    "actions": "Ações",
+    "status": "Status",
+    "noResults": "Nenhum resultado encontrado.",
+    "error": "Ocorreu um erro. Tente novamente.",
+    "success": "Operação realizada com sucesso!"
+  },
+  "auth": {
+    "login": {
+      "title": "Entrar na sua conta",
+      "username": "Usuário",
+      "usernamePlaceholder": "seu.usuario",
+      "password": "Senha",
+      "passwordPlaceholder": "••••••••",
+      "submit": "Entrar",
+      "submitting": "Entrando...",
+      "noAccount": "Não tem uma conta?",
+      "registerLink": "Cadastre-se",
+      "errorCredentials": "Usuário ou senha incorretos",
+      "successLogin": "Login realizado com sucesso!",
+      "sessionExpired": "Sua sessão expirou. Faça login novamente.",
+      "usernameMin": "Mínimo 3 caracteres",
+      "passwordMin": "Mínimo 6 caracteres"
+    },
+    "register": {
+      "title": "Criar nova conta",
+      "name": "Nome",
+      "namePlaceholder": "Seu nome completo",
+      "username": "Usuário",
+      "usernamePlaceholder": "seu.usuario",
+      "email": "E-mail",
+      "emailPlaceholder": "voce@exemplo.com",
+      "password": "Senha",
+      "passwordPlaceholder": "Mínimo 6 caracteres",
+      "submit": "Cadastrar",
+      "submitting": "Cadastrando...",
+      "hasAccount": "Já tem uma conta?",
+      "loginLink": "Faça login",
+      "successRegister": "Conta criada com sucesso!",
+      "errorConflict": "E-mail ou usuário já cadastrado"
+    },
+    "logout": {
+      "success": "Sessão encerrada"
+    }
+  },
+  "nav": {
+    "issues": "Issues",
+    "inventory": "Inventário",
+    "analytics": "Analytics",
+    "logout": "Sair",
+    "openMenu": "Abrir menu",
+    "closeMenu": "Fechar menu"
+  },
+  "issues": {
+    "title": "Issues",
+    "subtitle": "Gerenciamento de chamados e problemas",
+    "newIssue": "Nova Issue",
+    "searchPlaceholder": "Buscar issues...",
+    "status": {
+      "Open": "Aberto",
+      "InProgress": "Em Andamento",
+      "Resolved": "Resolvido",
+      "Closed": "Fechado"
+    },
+    "priority": {
+      "Low": "Baixa",
+      "Medium": "Média",
+      "High": "Alta",
+      "Critical": "Crítica"
+    },
+    "fields": {
+      "title": "Título",
+      "description": "Descrição",
+      "status": "Status",
+      "priority": "Prioridade",
+      "assignee": "Responsável",
+      "createdAt": "Criado em",
+      "updatedAt": "Atualizado em"
+    },
+    "form": {
+      "titlePlaceholder": "Título da issue",
+      "descriptionPlaceholder": "Descreva o problema em detalhes...",
+      "submit": "Criar Issue",
+      "submitting": "Criando...",
+      "titleRequired": "Título é obrigatório",
+      "titleMin": "Mínimo 5 caracteres"
+    },
+    "empty": "Nenhuma issue encontrada.",
+    "errorLoad": "Erro ao carregar issues."
+  },
+  "inventory": {
+    "title": "Inventário",
+    "subtitle": "Grid interativo com MudBlazor",
+    "blazorLoading": "Carregando componente Blazor..."
+  },
+  "analytics": {
+    "title": "Analytics",
+    "subtitle": "Dashboard de KPIs e gráficos com MudBlazor",
+    "blazorLoading": "Carregando componente Blazor..."
+  },
+  "locale": {
+    "label": "Idioma",
+    "pt": "Português",
+    "en": "English"
+  }
+}
