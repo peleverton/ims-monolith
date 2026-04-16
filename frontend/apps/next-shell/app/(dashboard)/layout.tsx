@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { Sidebar } from "@/components/sidebar";
 import { BlazorHost } from "@/components/blazor-host";
+import { SessionSync } from "@/components/session-sync";
 
 export default async function DashboardLayout({
   children,
@@ -19,6 +20,8 @@ export default async function DashboardLayout({
       </main>
       {/* Blazor WASM runtime — carregado lazy uma única vez no layout */}
       <BlazorHost />
+      {/* Sincroniza logout entre abas via BroadcastChannel */}
+      <SessionSync />
     </div>
   );
 }

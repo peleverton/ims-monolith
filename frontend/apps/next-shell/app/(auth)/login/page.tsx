@@ -19,7 +19,15 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard/issues";
+  const reason = searchParams.get("reason");
   const [showPassword, setShowPassword] = useState(false);
+
+  // Exibir toast de sessão expirada se redirecionado pelo api-client
+  useState(() => {
+    if (reason === "session_expired") {
+      toast.warning("Sua sessão expirou. Faça login novamente.");
+    }
+  });
 
   const {
     register,
