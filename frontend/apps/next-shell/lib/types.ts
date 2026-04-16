@@ -215,3 +215,33 @@ export interface AnalyticsSummaryDto {
   issuesByPriority: Record<IssuePriority, number>;
   issuesByDay: { date: string; count: number }[];
 }
+
+// ─── Admin / Users ────────────────────────────────────────────────────────────
+
+export interface UserAdminDto {
+  id: string;
+  username: string;
+  email: string;
+  fullName: string;
+  roles: string[];
+  isActive: boolean;
+  lastLoginAt?: string;
+  createdAt: string;
+}
+
+export interface RoleDto {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+export interface InviteUserRequest {
+  username: string;
+  email: string;
+  fullName: string;
+  role: string;
+}
+
+export interface UpdateUserRoleRequest {
+  roleName: string;
+}

@@ -23,6 +23,7 @@ public static class AuthModuleExtensions
         // Services
         services.AddSingleton<JwtTokenService>();
         services.AddScoped<IAuthenticationService, AuthenticationService>();
+        services.AddScoped<IUserAdminService, UserAdminService>();
 
         // JWT Authentication
         services.AddAuthentication(options =>
@@ -57,7 +58,11 @@ public static class AuthModuleExtensions
             };
         });
 
-        services.AddAuthorization();
+        services.AddAuthorization(options =>
+        {
+            options.AddPolicy("AdminOnly", policy =>
+                policy.RequireRole("Admin"));
+        });
 
         return services;
     }
