@@ -17,7 +17,12 @@
 !.env.example
 docker-compose*.yml
 Dockerfile
+Dockerfile.frontend
 
-# Frontend (não entra na imagem do backend — Dockerfile)
-# Nota: Dockerfile.frontend usa Dockerfile.frontend.dockerignore próprio
-frontend/
+# Backend não entra na imagem do frontend
+backend/
+infra/
+scripts/
+docs/
+tests/
+src/
