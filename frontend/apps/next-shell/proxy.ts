@@ -22,11 +22,11 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Rotas públicas — aplicar i18n sem verificação de auth
+  // Rotas públicas — deixar passar sem i18n redirect para evitar /en/login
   const isPublic = PUBLIC_ROUTES.some((r) =>
     pathname.replace(/^\/(pt|en)/, "").startsWith(r) || pathname.startsWith(r)
   );
-  if (isPublic) return intlMiddleware(request);
+  if (isPublic) return NextResponse.next();
 
   // Verificar autenticação
   const token = request.cookies.get(AUTH_COOKIE)?.value;
