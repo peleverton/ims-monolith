@@ -55,6 +55,133 @@ export interface UpdateIssueRequest {
 
 // ─── Inventory ────────────────────────────────────────────────────────────────
 
+export type ProductCategory =
+  | "Electronics"
+  | "Machinery"
+  | "RawMaterial"
+  | "Consumable"
+  | "Furniture"
+  | "Tool"
+  | "Spare"
+  | "Other";
+
+export type StockStatus = "Normal" | "Low" | "Critical" | "Overstock" | "OutOfStock";
+
+export type StockMovementType =
+  | "In"
+  | "Out"
+  | "Transfer"
+  | "Adjustment"
+  | "Return"
+  | "Damage"
+  | "Loss";
+
+export interface ProductListDto {
+  id: string;
+  name: string;
+  sku: string;
+  category: string;
+  currentStock: number;
+  unitPrice: number;
+  stockStatus: StockStatus;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface ProductDto {
+  id: string;
+  name: string;
+  sku: string;
+  barcode?: string;
+  description?: string;
+  category: string;
+  currentStock: number;
+  minimumStockLevel: number;
+  maximumStockLevel: number;
+  unitPrice: number;
+  costPrice: number;
+  unit: string;
+  currency: string;
+  locationId?: string;
+  supplierId?: string;
+  expiryDate?: string;
+  stockStatus: StockStatus;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface CreateProductRequest {
+  name: string;
+  sku: string;
+  category: ProductCategory;
+  minimumStockLevel: number;
+  maximumStockLevel: number;
+  unitPrice: number;
+  costPrice: number;
+  description?: string;
+  barcode?: string;
+  unit?: string;
+  currency?: string;
+  locationId?: string;
+  supplierId?: string;
+  expiryDate?: string;
+}
+
+export interface UpdateProductRequest {
+  name: string;
+  description?: string;
+  category: ProductCategory;
+  minimumStockLevel: number;
+  maximumStockLevel: number;
+  barcode?: string;
+  unit: string;
+  currency: string;
+  locationId?: string;
+  supplierId?: string;
+  expiryDate?: string;
+}
+
+export interface AdjustStockRequest {
+  quantity: number;
+  movementType: StockMovementType;
+  reference?: string;
+  notes?: string;
+}
+
+export interface StockMovementDto {
+  id: string;
+  productId: string;
+  productName?: string;
+  productSKU?: string;
+  movementType: string;
+  quantity: number;
+  locationId?: string;
+  locationName?: string;
+  reference?: string;
+  notes?: string;
+  movementDate: string;
+}
+
+export interface SupplierListDto {
+  id: string;
+  name: string;
+  code: string;
+  contactPerson?: string;
+  email?: string;
+  isActive: boolean;
+}
+
+export interface LocationListDto {
+  id: string;
+  name: string;
+  code: string;
+  type: string;
+  capacity: number;
+  isActive: boolean;
+}
+
+/** @deprecated use ProductDto instead */
 export interface InventoryItemDto {
   id: string;
   name: string;
