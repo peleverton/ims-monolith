@@ -21,14 +21,14 @@ Cada agente tem uma especialidade e ownership claro sobre um conjunto de USs.
 
 ```
 Onda 1 (paralela — sem dependências entre si):
-├── Morpheus  → feat/US-037-auth-hardening          (#52)
-├── Neo       → feat/US-038-inventory-crud-frontend  (#53)
-└── Trinity   → feat/US-041-dark-mode               (#56)
+├── Morpheus  → feat/US-037-auth-hardening          (#52) ✅ PR #59 mergeado
+├── Neo       → feat/US-038-inventory-crud-frontend  (#53) ✅ PR #61 mergeado
+└── Trinity   → feat/US-041-dark-mode               (#56) 🔄 em andamento
 
 Onda 2 (paralela — inicia após Onda 1):
-├── Morpheus  → feat/US-042-i18n                    (#57)  ← depende US-037 (api-client)
-├── Neo       → feat/US-039-signalr-notifications    (#54)  ← depende US-037 (api-client)
-└── Trinity   → feat/US-040-user-management-frontend (#55)  ← depende US-037 (auth-guard)
+├── Morpheus  → feat/US-042-i18n                    (#57) ✅ PR #60 mergeado
+├── Neo       → feat/US-039-signalr-notifications    (#54) 🔄 em andamento
+└── Trinity   → feat/US-040-user-management-frontend (#55) 🔄 em andamento
 ```
 
 ### Dependência crítica: `lib/api-client.ts`
@@ -39,14 +39,14 @@ As USs da Onda 2 dependem desse client. **Regra:** não mergear Onda 2 antes de 
 
 ## 🔀 Branches
 
-| Branch | Agente | Issue |
-|---|---|---|
-| `feat/US-037-auth-hardening` | Morpheus | #52 |
-| `feat/US-038-inventory-crud-frontend` | Neo | #53 |
-| `feat/US-039-signalr-notifications` | Neo | #54 |
-| `feat/US-040-user-management-frontend` | Trinity | #55 |
-| `feat/US-041-dark-mode` | Trinity | #56 |
-| `feat/US-042-i18n` | Morpheus | #57 |
+| Branch | Agente | Issue | Status |
+|---|---|---|---|
+| `feat/US-037-auth-hardening` | Morpheus | #52 | ✅ PR #59 mergeado |
+| `feat/US-038-inventory-crud-frontend` | Neo | #53 | ✅ PR #61 mergeado |
+| `feat/US-039-signalr-notifications` | Neo | #54 | 🔄 em andamento |
+| `feat/US-040-user-management-frontend` | Trinity | #55 | 🔄 em andamento |
+| `feat/US-041-dark-mode` | Trinity | #56 | 🔄 em andamento |
+| `feat/US-042-i18n` | Morpheus | #57 | ✅ PR #60 mergeado |
 
 ---
 
