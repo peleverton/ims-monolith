@@ -35,11 +35,20 @@ O **IMS** é um sistema de gestão de chamados e inventário. Com ele você pode
 
 ## Como Acessar
 
-Abra o navegador e acesse:
+Se você está rodando o sistema localmente, basta executar:
+
+```bash
+docker compose up -d
+```
+
+E acessar no navegador: **http://localhost:3000**
+
+> Precisa ter o [Docker](https://www.docker.com/get-started) instalado. Peça ao time técnico para configurar o ambiente na primeira vez.
+
+Para o ambiente de produção, acesse:
 
 ```
-http://localhost:3000      (ambiente local / desenvolvimento)
-https://app.ims.com        (ambiente de produção)
+https://app.ims.com
 ```
 
 O sistema funciona nos navegadores modernos: **Chrome**, **Firefox**, **Edge** e **Safari**.

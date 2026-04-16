@@ -126,6 +126,8 @@ ims-monolith/
 
 ## Setup Local (Dev)
 
+> ✅ **Modo rápido:** com Docker instalado, basta executar **dois comandos** para ter o stack completo rodando.
+
 ### 1. Clone o repositório
 
 ```bash
@@ -133,50 +135,70 @@ git clone https://github.com/peleverton/ims-monolith.git
 cd ims-monolith
 ```
 
-### 2. Suba a infraestrutura
+### 2. Configure as variáveis de ambiente
 
 ```bash
-# PostgreSQL + Redis + RabbitMQ
-docker compose -f docker-compose.dev.yml up -d
+cp .env.example .env
 ```
 
-### 3. Execute o backend
+O arquivo `.env` já vem com valores funcionais para desenvolvimento. Para produção, troque as senhas marcadas com `change_me_*`.
+
+### 3. ▶️ Suba tudo com Docker Compose
 
 ```bash
+docker compose up -d
+```
+
+Isso sobe **toda a stack** de uma vez:
+
+| Serviço | URL | Descrição |
+|---|---|---|
+| Frontend (Next.js) | http://localhost:3000 | Interface web |
+| API (.NET) | http://localhost:8080 | Backend REST + SignalR |
+| Swagger | http://localhost:8080/swagger | Documentação da API |
+| PostgreSQL | localhost:5432 | Banco de dados |
+| Redis | localhost:6379 | Cache |
+| RabbitMQ UI | http://localhost:15672 | Mensageria (ims/ims) |
+
+> Login padrão: `admin@ims.com` / `Admin@123`
+
+### 4. (Opcional) Com Observabilidade
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
+```
+
+Adiciona:
+- Prometheus: `http://localhost:9090`
+- Grafana: `http://localhost:3001` (admin / admin)
+
+### 5. Parar a stack
+
+```bash
+docker compose down
+# Para remover volumes (apaga dados):
+docker compose down -v
+```
+
+---
+
+### Setup manual (sem Docker)
+
+Use apenas se precisar rodar os serviços individualmente para debug.
+
+**Pré-requisito:** PostgreSQL, Redis e RabbitMQ rodando localmente ou via `docker compose -f docker-compose.dev.yml up -d`.
+
+```bash
+# Backend
 cd backend/src
 dotnet run --urls http://localhost:5049
-```
 
-A API estará disponível em: `http://localhost:5049`
-Swagger UI: `http://localhost:5049/swagger`
-
-### 4. Execute o frontend Next.js
-
-```bash
+# Frontend (outro terminal)
 cd frontend/apps/next-shell
+cp .env.local.example .env.local   # ajuste NEXT_PUBLIC_API_URL=http://localhost:5049
 npm install
 npm run dev
 ```
-
-Frontend disponível em: `http://localhost:3000`
-
-### 5. (Opcional) Compile o Blazor WASM
-
-```bash
-cd frontend/apps/blazor-modules
-dotnet publish -c Release -o publish
-```
-
-Os artefatos serão copiados para `frontend/apps/next-shell/public/_blazor`.
-
-### 6. (Opcional) Observabilidade
-
-```bash
-docker compose -f docker-compose.observability.yml up -d
-```
-
-- Prometheus: `http://localhost:9090`
-- Grafana: `http://localhost:3001` (admin / admin)
 
 ---
 
