@@ -76,8 +76,14 @@ public static class InventoryModuleExtensions
     {
         using var scope = services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
-        var env = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
 
+        if (db.Database.ProviderName?.Contains("InMemory", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            await db.Database.EnsureCreatedAsync();
+            return;
+        }
+
+        var env = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
         if (env.IsDevelopment())
         {
             var sql = db.Database.GenerateCreateScript();
@@ -92,7 +98,14 @@ public static class InventoryModuleExtensions
         }
         else
         {
-            await db.Database.MigrateAsync();
+            var script = db.Database.GenerateCreateScript();
+            foreach (var statement in script.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                var trimmed = statement.Trim();
+                if (string.IsNullOrEmpty(trimmed)) continue;
+                try { await db.Database.ExecuteSqlRawAsync(trimmed); }
+                catch (NpgsqlException ex) when (ex is Npgsql.PostgresException pe && (pe.SqlState == "42P07" || pe.SqlState == "42710" || pe.SqlState == "23505")) { }
+            }
         }
     }
 }

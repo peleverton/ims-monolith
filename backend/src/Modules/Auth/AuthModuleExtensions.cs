@@ -71,11 +71,26 @@ public static class AuthModuleExtensions
     {
         using var scope = services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
-        var env = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
 
-        if (env.IsDevelopment())
+        // SQLite / InMemory: usar EnsureCreated que funciona sem DDL raw
+        if (db.Database.IsSqlite() || db.Database.ProviderName?.Contains("InMemory", StringComparison.OrdinalIgnoreCase) == true)
+        {
             await db.Database.EnsureCreatedAsync();
-        else
-            await db.Database.MigrateAsync();
+            return;
+        }
+
+        // PostgreSQL: executar DDL idempotente
+        var script = db.Database.GenerateCreateScript();
+        foreach (var statement in script.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var sql = statement.Trim();
+            if (string.IsNullOrWhiteSpace(sql)) continue;
+            try { await db.Database.ExecuteSqlRawAsync(sql); }
+            catch (Npgsql.PostgresException ex) when (
+                ex.SqlState == "42P07" ||
+                ex.SqlState == "42710" ||
+                ex.SqlState == "23505")
+            { /* already exists */ }
+        }
     }
 }

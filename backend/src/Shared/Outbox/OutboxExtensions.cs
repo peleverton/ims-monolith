@@ -1,5 +1,6 @@
 using IMS.Modular.Shared.Database;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -28,5 +29,28 @@ public static class OutboxExtensions
         services.AddHostedService<OutboxProcessor>();
 
         return services;
+    }
+
+    public static async Task InitializeOutboxAsync(this IServiceProvider services)
+    {
+        using var scope = services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<OutboxDbContext>();
+
+        // For SQLite in-memory or when EnsureCreated succeeds, use that path
+        if (db.Database.IsSqlite() || db.Database.ProviderName?.Contains("InMemory", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            await db.Database.EnsureCreatedAsync();
+            return;
+        }
+
+        // For Postgres, use raw SQL to create the schema idempotently
+        var script = db.Database.GenerateCreateScript();
+        foreach (var statement in script.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var sql = statement.Trim();
+            if (string.IsNullOrWhiteSpace(sql)) continue;
+            try { await db.Database.ExecuteSqlRawAsync(sql); }
+            catch (Npgsql.PostgresException ex) when (ex.SqlState == "42P07" || ex.SqlState == "42710") { /* already exists */ }
+        }
     }
 }

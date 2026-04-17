@@ -44,7 +44,7 @@ export default async function IssuesPage({
           </p>
         </div>
         <Link
-          href="/dashboard/issues/new"
+          href="/issues/new"
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-500 transition-colors"
         >
           <Plus size={16} />
@@ -98,7 +98,7 @@ export default async function IssuesPage({
                         </span>
                       )}
                       <Link
-                        href={`/dashboard/issues/${issue.id}`}
+                        href={`/issues/${issue.id}`}
                         className="text-blue-600 hover:text-blue-500 font-medium"
                       >
                         Ver

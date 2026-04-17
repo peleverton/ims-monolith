@@ -23,7 +23,24 @@ export async function getSession(): Promise<SessionPayload | null> {
 
   try {
     const { payload } = await jwtVerify(token, secret);
-    return payload as unknown as SessionPayload;
+
+    // .NET uses long SOAP claim URIs — map them to friendly names
+    const p = payload as Record<string, unknown>;
+    const userId =
+      (p["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"] as string) ??
+      (p["sub"] as string) ?? "";
+    const username =
+      (p["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"] as string) ??
+      (p["name"] as string) ?? "";
+    const email =
+      (p["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"] as string) ??
+      (p["email"] as string) ?? "";
+    const rawRoles =
+      p["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] ??
+      p["role"] ?? [];
+    const roles = Array.isArray(rawRoles) ? (rawRoles as string[]) : [rawRoles as string];
+
+    return { userId, username, email, roles, exp: p["exp"] as number | undefined };
   } catch {
     return null;
   }

@@ -23,11 +23,16 @@ public static class IssuesModuleExtensions
     {
         using var scope = services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<IssuesDbContext>();
-        var env = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
 
+        if (db.Database.ProviderName?.Contains("InMemory", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            await db.Database.EnsureCreatedAsync();
+            return;
+        }
+
+        var env = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
         if (env.IsDevelopment())
         {
-            // SQLite: executa DDL manualmente para coexistir com outros DbContexts no mesmo arquivo
             var sql = db.Database.GenerateCreateScript();
             foreach (var statement in sql.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             {
@@ -40,7 +45,14 @@ public static class IssuesModuleExtensions
         }
         else
         {
-            await db.Database.MigrateAsync();
+            var script = db.Database.GenerateCreateScript();
+            foreach (var statement in script.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                var trimmed = statement.Trim();
+                if (string.IsNullOrEmpty(trimmed)) continue;
+                try { await db.Database.ExecuteSqlRawAsync(trimmed); }
+                catch (Npgsql.PostgresException ex) when (ex.SqlState == "42P07" || ex.SqlState == "42710" || ex.SqlState == "23505") { }
+            }
         }
     }
 }

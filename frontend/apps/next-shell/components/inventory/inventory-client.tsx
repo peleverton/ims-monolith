@@ -142,7 +142,7 @@ export function InventoryClient({ initialData, searchParams }: Props) {
     Object.entries(merged).forEach(([k, v]) => {
       if (v) qs.set(k, v);
     });
-    startTransition(() => router.push(`/dashboard/inventory?${qs}`));
+    startTransition(() => router.push(`/inventory?${qs}`));
   };
 
   const CATEGORIES = [
@@ -294,7 +294,7 @@ export function InventoryClient({ initialData, searchParams }: Props) {
                         <RefreshCw size={15} />
                       </button>
                       <button
-                        onClick={() => router.push(`/dashboard/inventory/${item.id}`)}
+                        onClick={() => router.push(`/inventory/${item.id}`)}
                         title="Ver movimentações"
                         className="p-1.5 rounded-lg text-gray-400 hover:text-purple-600 hover:bg-purple-50 transition-colors"
                       >

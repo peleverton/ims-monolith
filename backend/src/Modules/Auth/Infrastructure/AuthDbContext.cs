@@ -55,13 +55,13 @@ public class AuthDbContext(DbContextOptions<AuthDbContext> options) : DbContext(
             new Role { Id = userRoleId, Name = "User", Description = "Default user role" });
 
         var adminPasswordHash = Convert.ToBase64String(
-            SHA256.HashData(Encoding.UTF8.GetBytes("Admin@123")));
+            SHA256.HashData(Encoding.UTF8.GetBytes("Admin@123!")));
 
         modelBuilder.Entity<User>().HasData(new User
         {
             Id = adminUserId,
             Username = "admin",
-            Email = "admin@ims.local",
+            Email = "admin@ims.com",
             PasswordHash = adminPasswordHash,
             FullName = "System Administrator",
             IsActive = true

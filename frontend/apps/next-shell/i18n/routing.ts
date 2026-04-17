@@ -3,8 +3,7 @@ import { defineRouting } from "next-intl/routing";
 export const routing = defineRouting({
   locales: ["pt", "en"],
   defaultLocale: "pt",
-  // Cookie para persistir preferência sem prefixo na URL padrão
-  localePrefix: "as-needed",
+  localePrefix: "never",
 });
 
 export type Locale = (typeof routing.locales)[number];

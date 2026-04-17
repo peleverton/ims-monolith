@@ -8,15 +8,14 @@ interface BlazorHostProps {
   mountDelay?: number;
 }
 
-declare global {
-  interface Window {
-    imsAuth: {
-      getToken: () => string | null;
-    };
-    Blazor?: {
-      start: () => Promise<void>;
-    };
-  }
+declare global {    interface Window {
+      imsAuth: {
+        getToken: () => string | null;
+      };
+      Blazor?: {
+        start: (options?: Record<string, unknown>) => Promise<void>;
+      };
+    }
 }
 
 /**
@@ -60,6 +59,9 @@ export function BlazorHost({ mountDelay = 100 }: BlazorHostProps) {
         onLoad={() => {
           // Pequeno delay para garantir que o DOM está pronto para custom elements
           setTimeout(() => {
+            // Evita "Blazor has already started" ao renavegar
+            if ((window as any).__blazorStarted) return;
+            (window as any).__blazorStarted = true;
             window.Blazor?.start().catch(console.error);
           }, mountDelay);
         }}

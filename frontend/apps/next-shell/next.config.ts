@@ -14,6 +14,26 @@ const nextConfig: NextConfig = {
         source: "/api/proxy/:path*",
         destination: `${IMS_API_URL}/api/:path*`,
       },
+      // Proxy SignalR hubs to backend
+      {
+        source: "/hubs/:path*",
+        destination: `${IMS_API_URL}/hubs/:path*`,
+      },
+      // Proxy Blazor WASM static framework files to backend (backend serves under /_blazor/_framework/)
+      {
+        source: "/_framework/:path*",
+        destination: `${IMS_API_URL}/_blazor/_framework/:path*`,
+      },
+      // Proxy Blazor content files (backend serves under /_blazor/_content/)
+      {
+        source: "/_content/:path*",
+        destination: `${IMS_API_URL}/_blazor/_content/:path*`,
+      },
+      // Proxy /_blazor/ prefix directly
+      {
+        source: "/_blazor/:path*",
+        destination: `${IMS_API_URL}/_blazor/:path*`,
+      },
     ];
   },
   async headers() {

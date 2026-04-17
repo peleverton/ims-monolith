@@ -1,6 +1,6 @@
 using System.Data;
 using IMS.Modular.Modules.Analytics.Infrastructure;
-using Microsoft.Data.Sqlite;
+using Npgsql;
 
 namespace IMS.Modular.Modules.Analytics;
 
@@ -10,8 +10,8 @@ public static class AnalyticsModuleExtensions
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection")!;
 
-        // Dapper read connection (shared SQLite file)
-        services.AddScoped<IDbConnection>(_ => new SqliteConnection(connectionString));
+        // Dapper read connection (PostgreSQL)
+        services.AddScoped<IDbConnection>(_ => new NpgsqlConnection(connectionString));
         services.AddScoped<IAnalyticsReadRepository, AnalyticsReadRepository>();
 
         return services;

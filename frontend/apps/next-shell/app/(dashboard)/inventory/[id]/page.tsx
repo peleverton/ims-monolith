@@ -46,7 +46,7 @@ export default async function InventoryProductPage({ params }: Props) {
       {/* Breadcrumb */}
       <div className="mb-6">
         <Link
-          href="/dashboard/inventory"
+          href="/inventory"
           className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-4"
         >
           <ArrowLeft size={15} />

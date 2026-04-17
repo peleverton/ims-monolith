@@ -5,10 +5,14 @@ const IMS_API = process.env.IMS_API_URL ?? "http://localhost:5049";
 const AUTH_COOKIE = "ims_access_token";
 const REFRESH_COOKIE = "ims_refresh_token";
 
+// Only set Secure flag when the public URL is HTTPS
+const isSecure =
+  (process.env.NEXTAUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000").startsWith(
+    "https://"
+  );
+
 const cookieOpts = (maxAge: number) =>
-  `HttpOnly; Path=/; SameSite=Strict; Max-Age=${maxAge}${
-    process.env.NODE_ENV === "production" ? "; Secure" : ""
-  }`;
+  `HttpOnly; Path=/; SameSite=Lax; Max-Age=${maxAge}${isSecure ? "; Secure" : ""}`;
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
@@ -26,16 +30,22 @@ export async function POST(request: NextRequest) {
 
   const data: AuthResponse = await upstream.json();
 
+  // Compute seconds until expiry (backend returns expiresAt datetime string)
+  const expiresAt = (data as unknown as { expiresAt?: string }).expiresAt;
+  const accessTokenMaxAge = expiresAt
+    ? Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000))
+    : 3600;
+
   const response = NextResponse.json({
     username: data.username,
     email: data.email,
     roles: data.roles,
-    expiresIn: data.expiresIn,
+    expiresIn: accessTokenMaxAge,
   });
 
   response.headers.append(
     "Set-Cookie",
-    `${AUTH_COOKIE}=${data.accessToken}; ${cookieOpts(data.expiresIn)}`
+    `${AUTH_COOKIE}=${data.accessToken}; ${cookieOpts(accessTokenMaxAge)}`
   );
   response.headers.append(
     "Set-Cookie",

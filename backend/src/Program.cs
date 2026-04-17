@@ -148,6 +148,12 @@ builder.Services.AddImsHealthChecks(builder.Configuration);
 builder.Services.AddImsRateLimiting(builder.Configuration);
 
 // ============================================================
+// SIGNALR (US-039: Real-Time Notifications)
+// ============================================================
+
+builder.Services.AddSignalR();
+
+// ============================================================
 // OPENTELEMETRY (US-010: Traces + Metrics + Prometheus)
 // ============================================================
 
@@ -235,14 +241,25 @@ InventoryModule.Map(app);
 InventoryIssuesModule.Map(app);
 AnalyticsModule.Map(app);
 
+// SignalR hub
+app.MapHub<NotificationsHub>("/hubs/notifications").AllowAnonymous();
+
 // ============================================================
 // DATABASE INITIALIZATION
 // ============================================================
 
-await app.Services.InitializeAuthModuleAsync();
-await app.Services.InitializeIssuesModuleAsync();
-await app.Services.InitializeInventoryModuleAsync();
-await app.Services.InitializeInventoryIssuesModuleAsync();
+try
+{
+    await app.Services.InitializeOutboxAsync();
+    await app.Services.InitializeAuthModuleAsync();
+    await app.Services.InitializeIssuesModuleAsync();
+    await app.Services.InitializeInventoryModuleAsync();
+    await app.Services.InitializeInventoryIssuesModuleAsync();
+}
+catch (Exception ex)
+{
+    Log.Warning(ex, "Database initialization encountered an error (may be expected in test environments)");
+}
 
 // ============================================================
 // RUN

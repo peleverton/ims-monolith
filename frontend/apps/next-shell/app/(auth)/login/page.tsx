@@ -18,7 +18,7 @@ type FormData = z.infer<typeof schema>;
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard/issues";
+  const callbackUrl = searchParams.get("callbackUrl") ?? "/issues";
   const reason = searchParams.get("reason");
   const [showPassword, setShowPassword] = useState(false);
 
@@ -64,7 +64,7 @@ function LoginForm() {
           <input
             {...register("username")}
             type="text"
-            placeholder="seu.usuario"
+            placeholder="admin"
             className="w-full px-4 py-2.5 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
           {errors.username && (
