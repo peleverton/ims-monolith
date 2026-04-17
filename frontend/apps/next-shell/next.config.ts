@@ -10,10 +10,7 @@ const nextConfig: NextConfig = {
   output: "standalone",
   async rewrites() {
     return [
-      {
-        source: "/api/proxy/:path*",
-        destination: `${IMS_API_URL}/api/:path*`,
-      },
+      // /api/proxy/** is handled by app/api/proxy/[...path]/route.ts (authenticated BFF)
       // Proxy SignalR hubs to backend
       {
         source: "/hubs/:path*",

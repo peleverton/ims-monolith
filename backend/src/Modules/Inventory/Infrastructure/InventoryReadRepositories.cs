@@ -23,12 +23,12 @@ public class ProductReadRepository(IDbConnection connection) : IProductReadRepos
     public async Task<ProductReadDto?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
         const string sql = """
-            SELECT Id, Name, SKU, Barcode, Description, Category, CurrentStock,
-                   MinimumStockLevel, MaximumStockLevel, UnitPrice, CostPrice,
-                   Unit, Currency, LocationId, SupplierId, ExpiryDate,
-                   StockStatus, IsActive, CreatedAt, UpdatedAt
-            FROM Products
-            WHERE UPPER(Id) = @Id
+            SELECT "Id", "Name", "SKU", "Barcode", "Description", "Category", "CurrentStock",
+                   "MinimumStockLevel", "MaximumStockLevel", "UnitPrice", "CostPrice",
+                   "Unit", "Currency", "LocationId", "SupplierId", "ExpiryDate",
+                   "StockStatus", "IsActive", "CreatedAt", "UpdatedAt"
+            FROM "Products"
+            WHERE UPPER("Id"::text) = @Id
             """;
 
         return await connection.QuerySingleOrDefaultAsync<ProductReadDto>(sql, new { Id = GuidHelper.Up(id) });
@@ -37,12 +37,12 @@ public class ProductReadRepository(IDbConnection connection) : IProductReadRepos
     public async Task<ProductReadDto?> GetBySkuAsync(string sku, CancellationToken ct = default)
     {
         const string sql = """
-            SELECT Id, Name, SKU, Barcode, Description, Category, CurrentStock,
-                   MinimumStockLevel, MaximumStockLevel, UnitPrice, CostPrice,
-                   Unit, Currency, LocationId, SupplierId, ExpiryDate,
-                   StockStatus, IsActive, CreatedAt, UpdatedAt
-            FROM Products
-            WHERE SKU = @SKU
+            SELECT "Id", "Name", "SKU", "Barcode", "Description", "Category", "CurrentStock",
+                   "MinimumStockLevel", "MaximumStockLevel", "UnitPrice", "CostPrice",
+                   "Unit", "Currency", "LocationId", "SupplierId", "ExpiryDate",
+                   "StockStatus", "IsActive", "CreatedAt", "UpdatedAt"
+            FROM "Products"
+            WHERE "SKU" = @SKU
             """;
 
         return await connection.QuerySingleOrDefaultAsync<ProductReadDto>(sql, new { SKU = sku });
@@ -63,27 +63,27 @@ public class ProductReadRepository(IDbConnection connection) : IProductReadRepos
 
         if (category.HasValue)
         {
-            whereClauses.Add("Category = @Category");
+            whereClauses.Add("\"Category\" = @Category");
             parameters.Add("Category", category.Value.ToString());
         }
         if (stockStatus.HasValue)
         {
-            whereClauses.Add("StockStatus = @StockStatus");
+            whereClauses.Add("\"StockStatus\" = @StockStatus");
             parameters.Add("StockStatus", stockStatus.Value.ToString());
         }
         if (locationId.HasValue)
         {
-            whereClauses.Add("UPPER(LocationId) = @LocationId");
+            whereClauses.Add("UPPER(\"LocationId\"::text) = @LocationId");
             parameters.Add("LocationId", GuidHelper.Up(locationId));
         }
         if (supplierId.HasValue)
         {
-            whereClauses.Add("UPPER(SupplierId) = @SupplierId");
+            whereClauses.Add("UPPER(\"SupplierId\"::text) = @SupplierId");
             parameters.Add("SupplierId", GuidHelper.Up(supplierId));
         }
         if (!string.IsNullOrWhiteSpace(search))
         {
-            whereClauses.Add("(Name LIKE @Search OR SKU LIKE @Search OR Description LIKE @Search)");
+            whereClauses.Add("(\"Name\" ILIKE @Search OR \"SKU\" ILIKE @Search OR \"Description\" ILIKE @Search)");
             parameters.Add("Search", $"%{search}%");
         }
 
@@ -92,13 +92,13 @@ public class ProductReadRepository(IDbConnection connection) : IProductReadRepos
             : "";
 
         var sql = $"""
-            SELECT Id, Name, SKU, Category, CurrentStock, UnitPrice, StockStatus, IsActive, CreatedAt
-            FROM Products
+            SELECT "Id", "Name", "SKU", "Category", "CurrentStock", "UnitPrice", "StockStatus", "IsActive", "CreatedAt"
+            FROM "Products"
             {whereClause}
-            ORDER BY CreatedAt DESC
+            ORDER BY "CreatedAt" DESC
             LIMIT @PageSize OFFSET @Offset;
 
-            SELECT COUNT(*) FROM Products {whereClause};
+            SELECT COUNT(*) FROM "Products" {whereClause};
             """;
 
         parameters.Add("PageSize", pageSize);
@@ -131,23 +131,23 @@ public class StockMovementReadRepository(IDbConnection connection) : IStockMovem
 
         if (productId.HasValue)
         {
-            whereClauses.Add("UPPER(sm.ProductId) = @ProductId");
+            whereClauses.Add("UPPER(sm.\"ProductId\"::text) = @ProductId");
             parameters.Add("ProductId", GuidHelper.Up(productId));
         }
         if (movementType.HasValue)
         {
-            whereClauses.Add("sm.MovementType = @MovementType");
+            whereClauses.Add("sm.\"MovementType\" = @MovementType");
             parameters.Add("MovementType", movementType.Value.ToString());
         }
         if (fromDate.HasValue)
         {
-            whereClauses.Add("sm.MovementDate >= @FromDate");
-            parameters.Add("FromDate", fromDate.Value.ToString("yyyy-MM-dd"));
+            whereClauses.Add("sm.\"MovementDate\" >= @FromDate");
+            parameters.Add("FromDate", fromDate.Value);
         }
         if (toDate.HasValue)
         {
-            whereClauses.Add("sm.MovementDate <= @ToDate");
-            parameters.Add("ToDate", toDate.Value.ToString("yyyy-MM-dd"));
+            whereClauses.Add("sm.\"MovementDate\" <= @ToDate");
+            parameters.Add("ToDate", toDate.Value);
         }
 
         var whereClause = whereClauses.Count > 0
@@ -155,17 +155,17 @@ public class StockMovementReadRepository(IDbConnection connection) : IStockMovem
             : "";
 
         var sql = $"""
-            SELECT sm.Id, sm.ProductId, p.Name AS ProductName, p.SKU AS ProductSKU,
-                   sm.MovementType, sm.Quantity, sm.LocationId, l.Name AS LocationName,
-                   sm.Reference, sm.Notes, sm.MovementDate
-            FROM StockMovements sm
-            LEFT JOIN Products p ON UPPER(p.Id) = UPPER(sm.ProductId)
-            LEFT JOIN Locations l ON UPPER(l.Id) = UPPER(sm.LocationId)
+            SELECT sm."Id", sm."ProductId", p."Name" AS "ProductName", p."SKU" AS "ProductSKU",
+                   sm."MovementType", sm."Quantity", sm."LocationId", l."Name" AS "LocationName",
+                   sm."Reference", sm."Notes", sm."MovementDate"
+            FROM "StockMovements" sm
+            LEFT JOIN "Products" p ON UPPER(p."Id"::text) = UPPER(sm."ProductId"::text)
+            LEFT JOIN "Locations" l ON UPPER(l."Id"::text) = UPPER(sm."LocationId"::text)
             {whereClause}
-            ORDER BY sm.MovementDate DESC
+            ORDER BY sm."MovementDate" DESC
             LIMIT @PageSize OFFSET @Offset;
 
-            SELECT COUNT(*) FROM StockMovements sm {whereClause};
+            SELECT COUNT(*) FROM "StockMovements" sm {whereClause};
             """;
 
         parameters.Add("PageSize", pageSize);
@@ -187,11 +187,11 @@ public class SupplierReadRepository(IDbConnection connection) : ISupplierReadRep
     public async Task<SupplierReadDto?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
         const string sql = """
-            SELECT Id, Name, Code, ContactPerson, Email, Phone, Address, City, State,
-                   Country, PostalCode, TaxId, CreditLimit, PaymentTermsDays,
-                   IsActive, Notes, CreatedAt, UpdatedAt
-            FROM Suppliers
-            WHERE UPPER(Id) = @Id
+            SELECT "Id", "Name", "Code", "ContactPerson", "Email", "Phone", "Address", "City", "State",
+                   "Country", "PostalCode", "TaxId", "CreditLimit", "PaymentTermsDays",
+                   "IsActive", "Notes", "CreatedAt", "UpdatedAt"
+            FROM "Suppliers"
+            WHERE UPPER("Id"::text) = @Id
             """;
 
         return await connection.QuerySingleOrDefaultAsync<SupplierReadDto>(sql, new { Id = GuidHelper.Up(id) });
@@ -209,12 +209,12 @@ public class SupplierReadRepository(IDbConnection connection) : ISupplierReadRep
 
         if (isActive.HasValue)
         {
-            whereClauses.Add("IsActive = @IsActive");
+            whereClauses.Add("\"IsActive\" = @IsActive");
             parameters.Add("IsActive", isActive.Value);
         }
         if (!string.IsNullOrWhiteSpace(search))
         {
-            whereClauses.Add("(Name LIKE @Search OR Code LIKE @Search OR ContactPerson LIKE @Search)");
+            whereClauses.Add("(\"Name\" ILIKE @Search OR \"Code\" ILIKE @Search OR \"ContactPerson\" ILIKE @Search)");
             parameters.Add("Search", $"%{search}%");
         }
 
@@ -223,13 +223,13 @@ public class SupplierReadRepository(IDbConnection connection) : ISupplierReadRep
             : "";
 
         var sql = $"""
-            SELECT Id, Name, Code, ContactPerson, Email, IsActive, CreatedAt
-            FROM Suppliers
+            SELECT "Id", "Name", "Code", "ContactPerson", "Email", "IsActive", "CreatedAt"
+            FROM "Suppliers"
             {whereClause}
-            ORDER BY Name ASC
+            ORDER BY "Name" ASC
             LIMIT @PageSize OFFSET @Offset;
 
-            SELECT COUNT(*) FROM Suppliers {whereClause};
+            SELECT COUNT(*) FROM "Suppliers" {whereClause};
             """;
 
         parameters.Add("PageSize", pageSize);
@@ -251,10 +251,10 @@ public class LocationReadRepository(IDbConnection connection) : ILocationReadRep
     public async Task<LocationReadDto?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
         const string sql = """
-            SELECT Id, Name, Code, Type, Capacity, Description, ParentLocationId,
-                   Address, City, State, Country, PostalCode, IsActive, CreatedAt, UpdatedAt
-            FROM Locations
-            WHERE UPPER(Id) = @Id
+            SELECT "Id", "Name", "Code", "Type", "Capacity", "Description", "ParentLocationId",
+                   "Address", "City", "State", "Country", "PostalCode", "IsActive", "CreatedAt", "UpdatedAt"
+            FROM "Locations"
+            WHERE UPPER("Id"::text) = @Id
             """;
 
         return await connection.QuerySingleOrDefaultAsync<LocationReadDto>(sql, new { Id = GuidHelper.Up(id) });
@@ -273,17 +273,17 @@ public class LocationReadRepository(IDbConnection connection) : ILocationReadRep
 
         if (type.HasValue)
         {
-            whereClauses.Add("Type = @Type");
+            whereClauses.Add("\"Type\" = @Type");
             parameters.Add("Type", type.Value.ToString());
         }
         if (isActive.HasValue)
         {
-            whereClauses.Add("IsActive = @IsActive");
+            whereClauses.Add("\"IsActive\" = @IsActive");
             parameters.Add("IsActive", isActive.Value);
         }
         if (!string.IsNullOrWhiteSpace(search))
         {
-            whereClauses.Add("(Name LIKE @Search OR Code LIKE @Search OR Description LIKE @Search)");
+            whereClauses.Add("(\"Name\" ILIKE @Search OR \"Code\" ILIKE @Search OR \"Description\" ILIKE @Search)");
             parameters.Add("Search", $"%{search}%");
         }
 
@@ -292,13 +292,13 @@ public class LocationReadRepository(IDbConnection connection) : ILocationReadRep
             : "";
 
         var sql = $"""
-            SELECT Id, Name, Code, Type, Capacity, IsActive, CreatedAt
-            FROM Locations
+            SELECT "Id", "Name", "Code", "Type", "Capacity", "IsActive", "CreatedAt"
+            FROM "Locations"
             {whereClause}
-            ORDER BY Name ASC
+            ORDER BY "Name" ASC
             LIMIT @PageSize OFFSET @Offset;
 
-            SELECT COUNT(*) FROM Locations {whereClause};
+            SELECT COUNT(*) FROM "Locations" {whereClause};
             """;
 
         parameters.Add("PageSize", pageSize);
