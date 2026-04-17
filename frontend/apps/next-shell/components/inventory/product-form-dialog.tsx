@@ -16,12 +16,23 @@ import type { ProductDto } from "@/lib/types";
 
 const CATEGORIES = [
   "Electronics",
-  "Machinery",
-  "RawMaterial",
-  "Consumable",
+  "Food",
+  "Beverages",
+  "Clothing",
   "Furniture",
-  "Tool",
-  "Spare",
+  "Books",
+  "Toys",
+  "Sports",
+  "Tools",
+  "Automotive",
+  "Health",
+  "Medical",
+  "Beauty",
+  "Home",
+  "Garden",
+  "Office",
+  "Pet",
+  "Baby",
   "Other",
 ] as const;
 

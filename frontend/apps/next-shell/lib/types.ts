@@ -57,24 +57,43 @@ export interface UpdateIssueRequest {
 
 export type ProductCategory =
   | "Electronics"
-  | "Machinery"
-  | "RawMaterial"
-  | "Consumable"
+  | "Food"
+  | "Beverages"
+  | "Clothing"
   | "Furniture"
-  | "Tool"
-  | "Spare"
+  | "Books"
+  | "Toys"
+  | "Sports"
+  | "Tools"
+  | "Automotive"
+  | "Health"
+  | "Medical"
+  | "Beauty"
+  | "Home"
+  | "Garden"
+  | "Office"
+  | "Pet"
+  | "Baby"
   | "Other";
 
-export type StockStatus = "Normal" | "Low" | "Critical" | "Overstock" | "OutOfStock";
+export type StockStatus = "InStock" | "LowStock" | "OutOfStock" | "Overstock" | "Discontinued";
 
 export type StockMovementType =
-  | "In"
-  | "Out"
-  | "Transfer"
+  | "InitialStock"
+  | "StockIn"
+  | "StockOut"
   | "Adjustment"
+  | "Transfer"
+  | "Sale"
+  | "Purchase"
   | "Return"
   | "Damage"
-  | "Loss";
+  | "Loss"
+  | "Expired"
+  | "LocationChanged"
+  | "PriceAdjustment"
+  | "Updated"
+  | "Discontinued";
 
 export interface ProductListDto {
   id: string;

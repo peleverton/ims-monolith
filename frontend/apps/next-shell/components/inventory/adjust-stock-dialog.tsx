@@ -13,24 +13,26 @@ import { z } from "zod";
 import { X } from "lucide-react";
 
 const MOVEMENT_TYPES = [
-  { value: "In", label: "Entrada" },
-  { value: "Out", label: "Saída" },
+  { value: "StockIn", label: "Entrada" },
+  { value: "StockOut", label: "Saída" },
   { value: "Adjustment", label: "Ajuste" },
   { value: "Return", label: "Devolução" },
   { value: "Damage", label: "Avaria" },
   { value: "Loss", label: "Perda" },
+  { value: "Purchase", label: "Compra" },
+  { value: "Sale", label: "Venda" },
 ] as const;
 
 const schema = z.object({
   quantity: z.preprocess(Number, z.number().int().min(1, "Quantidade ≥ 1")),
-  movementType: z.enum(["In", "Out", "Adjustment", "Return", "Damage", "Loss"]),
+  movementType: z.enum(["StockIn", "StockOut", "Adjustment", "Return", "Damage", "Loss", "Purchase", "Sale"]),
   reference: z.string().optional(),
   notes: z.string().optional(),
 });
 
 type FormValues = {
   quantity: number;
-  movementType: "In" | "Out" | "Adjustment" | "Return" | "Damage" | "Loss";
+  movementType: "StockIn" | "StockOut" | "Adjustment" | "Return" | "Damage" | "Loss" | "Purchase" | "Sale";
   reference?: string;
   notes?: string;
 };
@@ -59,12 +61,12 @@ export function AdjustStockDialog({
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema) as import("react-hook-form").Resolver<FormValues>,
-    defaultValues: { movementType: "In", quantity: 1 },
+    defaultValues: { movementType: "StockIn", quantity: 1 },
   });
 
   useEffect(() => {
     if (open) {
-      reset({ movementType: "In", quantity: 1 });
+      reset({ movementType: "StockIn", quantity: 1 });
       dialogRef.current?.showModal();
     } else {
       dialogRef.current?.close();
