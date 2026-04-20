@@ -1,3 +1,4 @@
+using IMS.Modular.Modules.Issues.Application.Consumers;
 using IMS.Modular.Modules.Issues.Infrastructure;
 using IMS.Modular.Shared.Database;
 using Microsoft.EntityFrameworkCore;
@@ -15,6 +16,9 @@ public static class IssuesModuleExtensions
             options.UseImsDatabase(configuration, env,
                 migrationsAssembly: typeof(IssuesDbContext).Assembly.FullName);
         });
+
+        // US-048: Consumer that broadcasts SignalR notifications when an issue is created
+        services.AddHostedService<IssueCreatedConsumerService>();
 
         return services;
     }

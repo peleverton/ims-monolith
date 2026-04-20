@@ -73,9 +73,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     const conn = getSignalRConnection();
 
     // Hub event handlers
-    conn.on("NewIssue", (payload: { title: string; priority: string }) => {
+    conn.on("NewIssue", (payload: { issueId?: string; title: string; priority: string; reporterId?: string }) => {
       addNotification(
-        "Nova Issue Criada",
+        "🆕 Nova Issue Criada",
         `"${payload.title}" — Prioridade: ${payload.priority}`,
         "info"
       );
