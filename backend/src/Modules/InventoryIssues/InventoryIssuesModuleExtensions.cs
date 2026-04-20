@@ -1,4 +1,5 @@
 using System.Data;
+using IMS.Modular.Modules.InventoryIssues.Application.Consumers;
 using IMS.Modular.Modules.InventoryIssues.Infrastructure;
 using IMS.Modular.Shared.Database;
 using Microsoft.Data.Sqlite;
@@ -33,6 +34,9 @@ public static class InventoryIssuesModuleExtensions
         });
 
         services.AddScoped<IInventoryIssueReadRepository, InventoryIssueReadRepository>();
+
+        // US-047: Consumer that creates InventoryIssues from low-stock RabbitMQ events
+        services.AddHostedService<LowStockConsumerService>();
 
         return services;
     }

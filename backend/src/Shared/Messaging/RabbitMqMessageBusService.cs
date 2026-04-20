@@ -1,4 +1,5 @@
 using IMS.Modular.Shared.Abstractions;
+using IMS.Modular.Shared.Observability;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Polly;
@@ -49,6 +50,13 @@ public sealed class RabbitMqMessageBusService : IMessageBus, IAsyncDisposable
         T message,
         CancellationToken cancellationToken = default) where T : class
     {
+        // US-049: span so the full trace chain (handler → outbox → rabbit) is visible in Jaeger
+        using var activity = OpenTelemetryExtensions.ActivitySource.StartActivity("RabbitMQ.Publish");
+        activity?.SetTag("messaging.system", "rabbitmq");
+        activity?.SetTag("messaging.destination", exchange);
+        activity?.SetTag("messaging.routing_key", routingKey);
+        activity?.SetTag("messaging.message_type", typeof(T).Name);
+
         var connection = await GetConnectionAsync(cancellationToken);
 
         await _retryPolicy.ExecuteAsync(async () =>
@@ -81,6 +89,7 @@ public sealed class RabbitMqMessageBusService : IMessageBus, IAsyncDisposable
 
             _logger.LogDebug("[RabbitMQ] Published {MessageType} → {Exchange}/{RoutingKey}",
                 typeof(T).Name, exchange, routingKey);
+            activity?.SetTag("messaging.success", true);
         });
     }
 
@@ -88,7 +97,9 @@ public sealed class RabbitMqMessageBusService : IMessageBus, IAsyncDisposable
     public async Task SubscribeAsync<T>(
         string queueName,
         Func<T, CancellationToken, Task> handler,
-        CancellationToken cancellationToken = default) where T : class
+        CancellationToken cancellationToken = default,
+        string? exchange = null,
+        string? bindingKey = null) where T : class
     {
         var connection = await GetConnectionAsync(cancellationToken);
         var channel = await connection.CreateChannelAsync(cancellationToken: cancellationToken);
@@ -99,6 +110,26 @@ public sealed class RabbitMqMessageBusService : IMessageBus, IAsyncDisposable
             exclusive: false,
             autoDelete: false,
             cancellationToken: cancellationToken);
+
+        // Bind queue to exchange when provided (topic routing)
+        if (!string.IsNullOrEmpty(exchange) && !string.IsNullOrEmpty(bindingKey))
+        {
+            await channel.ExchangeDeclareAsync(
+                exchange: exchange,
+                type: ExchangeType.Topic,
+                durable: true,
+                autoDelete: false,
+                cancellationToken: cancellationToken);
+
+            await channel.QueueBindAsync(
+                queue: queueName,
+                exchange: exchange,
+                routingKey: bindingKey,
+                cancellationToken: cancellationToken);
+
+            _logger.LogInformation("[RabbitMQ] Queue '{Queue}' bound to exchange '{Exchange}' with key '{Key}'",
+                queueName, exchange, bindingKey);
+        }
 
         await channel.BasicQosAsync(prefetchSize: 0, prefetchCount: 10, global: false, cancellationToken: cancellationToken);
 

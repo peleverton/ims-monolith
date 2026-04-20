@@ -53,7 +53,7 @@ internal sealed class NullMessageBusService(ILogger<NullMessageBusService> logge
         return Task.CompletedTask;
     }
 
-    public Task SubscribeAsync<T>(string queueName, Func<T, CancellationToken, Task> handler, CancellationToken cancellationToken = default)
+    public Task SubscribeAsync<T>(string queueName, Func<T, CancellationToken, Task> handler, CancellationToken cancellationToken = default, string? exchange = null, string? bindingKey = null)
         where T : class
     {
         logger.LogDebug("[MessageBus:Null] SubscribeAsync ignored — RabbitMQ not configured. Queue={Queue}", queueName);
