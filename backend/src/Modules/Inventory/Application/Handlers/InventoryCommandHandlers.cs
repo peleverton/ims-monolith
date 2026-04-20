@@ -3,6 +3,7 @@ using IMS.Modular.Modules.Inventory.Application.DTOs;
 using IMS.Modular.Modules.Inventory.Application.Mappings;
 using IMS.Modular.Modules.Inventory.Domain;
 using IMS.Modular.Modules.Inventory.Domain.Entities;
+using IMS.Modular.Shared.Abstractions;
 using IMS.Modular.Shared.Domain;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -13,6 +14,7 @@ namespace IMS.Modular.Modules.Inventory.Application.Handlers;
 
 public sealed class CreateProductCommandHandler(
     IProductRepository repo,
+    ICacheService cache,
     ILogger<CreateProductCommandHandler> logger)
     : IRequestHandler<CreateProductCommand, Result<ProductDto>>
 {
@@ -34,6 +36,7 @@ public sealed class CreateProductCommandHandler(
         await repo.AddAsync(product, ct);
         await repo.SaveChangesAsync(ct);
 
+        await cache.RemoveByPrefixAsync("inventory-products-list", ct);
         logger.LogInformation("Product created: {ProductId} SKU={SKU}", product.Id, product.SKU);
         return Result<ProductDto>.Success(InventoryMapper.ToDto(product));
     }
@@ -41,6 +44,7 @@ public sealed class CreateProductCommandHandler(
 
 public sealed class UpdateProductCommandHandler(
     IProductRepository repo,
+    ICacheService cache,
     ILogger<UpdateProductCommandHandler> logger)
     : IRequestHandler<UpdateProductCommand, Result<ProductDto>>
 {
@@ -58,6 +62,8 @@ public sealed class UpdateProductCommandHandler(
         repo.Update(product);
         await repo.SaveChangesAsync(ct);
 
+        await cache.RemoveAsync($"inventory-product-{cmd.Id}", ct);
+        await cache.RemoveByPrefixAsync("inventory-products-list", ct);
         logger.LogInformation("Product updated: {ProductId}", cmd.Id);
         return Result<ProductDto>.Success(InventoryMapper.ToDto(product));
     }
@@ -65,6 +71,7 @@ public sealed class UpdateProductCommandHandler(
 
 public sealed class DeleteProductCommandHandler(
     IProductRepository repo,
+    ICacheService cache,
     ILogger<DeleteProductCommandHandler> logger)
     : IRequestHandler<DeleteProductCommand, Result<bool>>
 {
@@ -76,6 +83,8 @@ public sealed class DeleteProductCommandHandler(
         repo.Remove(product);
         await repo.SaveChangesAsync(ct);
 
+        await cache.RemoveAsync($"inventory-product-{cmd.Id}", ct);
+        await cache.RemoveByPrefixAsync("inventory-products-list", ct);
         logger.LogInformation("Product deleted: {ProductId}", cmd.Id);
         return Result<bool>.Success(true);
     }
@@ -84,6 +93,7 @@ public sealed class DeleteProductCommandHandler(
 public sealed class AdjustStockCommandHandler(
     IProductRepository productRepo,
     IStockMovementRepository movementRepo,
+    ICacheService cache,
     ILogger<AdjustStockCommandHandler> logger)
     : IRequestHandler<AdjustStockCommand, Result<ProductDto>>
 {
@@ -102,6 +112,8 @@ public sealed class AdjustStockCommandHandler(
         await movementRepo.AddAsync(movement, ct);
         await productRepo.SaveChangesAsync(ct);
 
+        await cache.RemoveAsync($"inventory-product-{cmd.ProductId}", ct);
+        await cache.RemoveByPrefixAsync("inventory-products-list", ct);
         logger.LogInformation("Stock adjusted: Product={ProductId} Qty={Qty} Type={Type}",
             cmd.ProductId, cmd.Quantity, cmd.MovementType);
         return Result<ProductDto>.Success(InventoryMapper.ToDto(product));
@@ -137,6 +149,7 @@ public sealed class TransferStockCommandHandler(
 
 public sealed class DiscontinueProductCommandHandler(
     IProductRepository repo,
+    ICacheService cache,
     ILogger<DiscontinueProductCommandHandler> logger)
     : IRequestHandler<DiscontinueProductCommand, Result<ProductDto>>
 {
@@ -149,6 +162,8 @@ public sealed class DiscontinueProductCommandHandler(
         repo.Update(product);
         await repo.SaveChangesAsync(ct);
 
+        await cache.RemoveAsync($"inventory-product-{cmd.Id}", ct);
+        await cache.RemoveByPrefixAsync("inventory-products-list", ct);
         logger.LogInformation("Product discontinued: {ProductId}", cmd.Id);
         return Result<ProductDto>.Success(InventoryMapper.ToDto(product));
     }
@@ -156,6 +171,7 @@ public sealed class DiscontinueProductCommandHandler(
 
 public sealed class UpdatePricingCommandHandler(
     IProductRepository repo,
+    ICacheService cache,
     ILogger<UpdatePricingCommandHandler> logger)
     : IRequestHandler<UpdatePricingCommand, Result<ProductDto>>
 {
@@ -168,6 +184,8 @@ public sealed class UpdatePricingCommandHandler(
         repo.Update(product);
         await repo.SaveChangesAsync(ct);
 
+        await cache.RemoveAsync($"inventory-product-{cmd.Id}", ct);
+        await cache.RemoveByPrefixAsync("inventory-products-list", ct);
         logger.LogInformation("Pricing updated: Product={ProductId} UnitPrice={Price}", cmd.Id, cmd.UnitPrice);
         return Result<ProductDto>.Success(InventoryMapper.ToDto(product));
     }

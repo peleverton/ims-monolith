@@ -2,6 +2,7 @@ using IMS.Modular.Modules.Inventory.Application.DTOs;
 using IMS.Modular.Modules.Inventory.Application.Mappings;
 using IMS.Modular.Modules.Inventory.Application.Queries;
 using IMS.Modular.Modules.Inventory.Domain;
+using IMS.Modular.Shared.Abstractions;
 using IMS.Modular.Shared.Domain;
 using MediatR;
 
@@ -9,13 +10,22 @@ namespace IMS.Modular.Modules.Inventory.Application.Handlers;
 
 // ── Product Query Handlers ────────────────────────────────────────────────
 
-public sealed class GetProductByIdQueryHandler(IProductReadRepository repo)
+public sealed class GetProductByIdQueryHandler(
+    IProductReadRepository repo,
+    ICacheService cache)
     : IRequestHandler<GetProductByIdQuery, ProductDto?>
 {
     public async Task<ProductDto?> Handle(GetProductByIdQuery request, CancellationToken ct)
     {
+        var key = $"inventory-product-{request.Id}";
+        var cached = await cache.GetAsync<ProductDto>(key, ct);
+        if (cached is not null) return cached;
+
         var dto = await repo.GetByIdAsync(request.Id, ct);
-        return dto is null ? null : InventoryMapper.FromReadDto(dto);
+        var result = dto is null ? null : InventoryMapper.FromReadDto(dto);
+        if (result is not null)
+            await cache.SetAsync(key, result, TimeSpan.FromSeconds(120), ct);
+        return result;
     }
 }
 
@@ -29,20 +39,29 @@ public sealed class GetProductBySkuQueryHandler(IProductReadRepository repo)
     }
 }
 
-public sealed class GetProductsQueryHandler(IProductReadRepository repo)
+public sealed class GetProductsQueryHandler(
+    IProductReadRepository repo,
+    ICacheService cache)
     : IRequestHandler<GetProductsQuery, PagedResult<ProductListDto>>
 {
     public async Task<PagedResult<ProductListDto>> Handle(GetProductsQuery request, CancellationToken ct)
     {
+        var key = $"inventory-products-list-{request.Page}-{request.PageSize}-{request.Category}-{request.StockStatus}-{request.Search}-{request.LocationId}-{request.SupplierId}";
+        var cached = await cache.GetAsync<PagedResult<ProductListDto>>(key, ct);
+        if (cached is not null) return cached;
+
         var paged = await repo.GetPagedAsync(
             request.Page, request.PageSize,
             request.Category, request.StockStatus,
             request.LocationId, request.SupplierId,
             request.Search, ct);
 
-        return new PagedResult<ProductListDto>(
+        var result = new PagedResult<ProductListDto>(
             paged.Items.Select(InventoryMapper.FromSummaryDto).ToList(),
             paged.TotalCount, paged.Page, paged.PageSize);
+
+        await cache.SetAsync(key, result, TimeSpan.FromSeconds(60), ct);
+        return result;
     }
 }
 
