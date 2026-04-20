@@ -28,62 +28,76 @@ export default function NewIssuePage() {
   });
 
   const onSubmit = async (data: FormData) => {
-    const res = await fetch("/api/proxy/issues", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
+    try {
+      const res = await fetch("/api/proxy/issues", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(data),
+      });
 
-    if (!res.ok) {
-      toast.error("Erro ao criar issue");
-      return;
+      if (!res.ok) {
+        let errorMsg = `Erro ao criar issue (${res.status})`;
+        try {
+          const body = await res.json();
+          console.error("[NewIssue] Error response:", res.status, body);
+          if (body?.title) errorMsg = body.title;
+          else if (body?.error) errorMsg = body.error;
+          else if (body?.errors) errorMsg = Object.values(body.errors).flat().join(", ");
+        } catch {}
+        toast.error(errorMsg);
+        return;
+      }
+
+      toast.success("Issue criada com sucesso!");
+      // Force full navigation to ensure server components re-fetch fresh data
+      window.location.href = "/issues";
+    } catch (err) {
+      console.error("[NewIssue] Fetch error:", err);
+      toast.error("Erro de conexão com o servidor");
     }
-
-    toast.success("Issue criada com sucesso!");
-    router.push("/issues");
-    router.refresh();
   };
 
   return (
     <div className="max-w-2xl">
       <Link
         href="/issues"
-        className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 mb-6"
+        className="flex items-center gap-2 text-sm text-(--text-secondary) hover:text-(--text-primary) mb-6"
       >
         <ArrowLeft size={15} />
         Voltar para Issues
       </Link>
 
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-        <h1 className="text-xl font-bold text-gray-900 mb-6">Nova Issue</h1>
+      <div className="bg-(--bg-surface) rounded-xl border border-(--border) shadow-sm p-6">
+        <h1 className="text-xl font-bold text-(--text-primary) mb-6">Nova Issue</h1>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Título</label>
+            <label className="block text-sm font-medium text-(--text-primary) mb-1">Título</label>
             <input
               {...register("title")}
-              className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2.5 rounded-lg border border-(--border-input) bg-(--bg-surface) text-sm text-(--text-primary) focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Descreva o problema brevemente"
             />
             {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title.message}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
+            <label className="block text-sm font-medium text-(--text-primary) mb-1">Descrição</label>
             <textarea
               {...register("description")}
               rows={5}
-              className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              className="w-full px-3 py-2.5 rounded-lg border border-(--border-input) bg-(--bg-surface) text-sm text-(--text-primary) focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               placeholder="Descreva o problema em detalhes..."
             />
             {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description.message}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Prioridade</label>
+            <label className="block text-sm font-medium text-(--text-primary) mb-1">Prioridade</label>
             <select
               {...register("priority")}
-              className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2.5 rounded-lg border border-(--border-input) bg-(--bg-surface) text-sm text-(--text-primary) focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {["Low", "Medium", "High", "Critical"].map((p) => (
                 <option key={p} value={p}>{p}</option>
@@ -94,7 +108,7 @@ export default function NewIssuePage() {
           <div className="flex gap-3 pt-2">
             <Link
               href="/issues"
-              className="flex-1 py-2.5 text-center rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              className="flex-1 py-2.5 text-center rounded-lg border border-(--border-input) text-sm font-medium text-(--text-primary) hover:bg-(--bg-subtle) transition-colors"
             >
               Cancelar
             </Link>

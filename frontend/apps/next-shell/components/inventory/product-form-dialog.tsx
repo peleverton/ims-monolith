@@ -139,13 +139,13 @@ export function ProductFormDialog({ open, product, onClose, onSubmit }: Props) {
       className="w-full max-w-2xl rounded-xl shadow-xl p-0 backdrop:bg-black/40 open:flex open:flex-col"
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-900">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-(--border)">
+        <h2 className="text-lg font-semibold text-(--text-primary)">
           {product ? "Editar Produto" : "Novo Produto"}
         </h2>
         <button
           onClick={handleClose}
-          className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+          className="p-1 rounded-lg text-(--text-muted) hover:text-(--text-primary) hover:bg-(--bg-subtle) transition-colors"
           aria-label="Fechar"
         >
           <X size={20} />
@@ -160,12 +160,12 @@ export function ProductFormDialog({ open, product, onClose, onSubmit }: Props) {
         <div className="px-6 py-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Nome */}
           <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-(--text-primary) mb-1">
               Nome <span className="text-red-500">*</span>
             </label>
             <input
               {...register("name")}
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 rounded-lg border border-(--border-input) bg-(--bg-surface) text-(--text-primary) text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Nome do produto"
             />
             {errors.name && (
@@ -175,13 +175,13 @@ export function ProductFormDialog({ open, product, onClose, onSubmit }: Props) {
 
           {/* SKU */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-(--text-primary) mb-1">
               SKU <span className="text-red-500">*</span>
             </label>
             <input
               {...register("sku")}
               disabled={!!product}
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
+              className="w-full px-3 py-2 rounded-lg border border-(--border-input) bg-(--bg-surface) text-(--text-primary) text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed"
               placeholder="EX-0001"
             />
             {errors.sku && (
@@ -191,12 +191,12 @@ export function ProductFormDialog({ open, product, onClose, onSubmit }: Props) {
 
           {/* Categoria */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-(--text-primary) mb-1">
               Categoria <span className="text-red-500">*</span>
             </label>
             <select
               {...register("category")}
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 rounded-lg border border-(--border-input) bg-(--bg-surface) text-(--text-primary) text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {CATEGORIES.map((c) => (
                 <option key={c} value={c}>
@@ -213,37 +213,37 @@ export function ProductFormDialog({ open, product, onClose, onSubmit }: Props) {
 
           {/* Barcode */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-(--text-primary) mb-1">
               Código de barras
             </label>
             <input
               {...register("barcode")}
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 rounded-lg border border-(--border-input) bg-(--bg-surface) text-(--text-primary) text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="123456789"
             />
           </div>
 
           {/* Unidade */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-(--text-primary) mb-1">
               Unidade <span className="text-red-500">*</span>
             </label>
             <input
               {...register("unit")}
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 rounded-lg border border-(--border-input) bg-(--bg-surface) text-(--text-primary) text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="un, kg, l..."
             />
           </div>
 
           {/* Estoque mínimo */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-(--text-primary) mb-1">
               Estoque mínimo <span className="text-red-500">*</span>
             </label>
             <input
               type="number"
               {...register("minimumStockLevel")}
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 rounded-lg border border-(--border-input) bg-(--bg-surface) text-(--text-primary) text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             {errors.minimumStockLevel && (
               <p className="mt-1 text-xs text-red-500">
@@ -254,13 +254,13 @@ export function ProductFormDialog({ open, product, onClose, onSubmit }: Props) {
 
           {/* Estoque máximo */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-(--text-primary) mb-1">
               Estoque máximo <span className="text-red-500">*</span>
             </label>
             <input
               type="number"
               {...register("maximumStockLevel")}
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 rounded-lg border border-(--border-input) bg-(--bg-surface) text-(--text-primary) text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             {errors.maximumStockLevel && (
               <p className="mt-1 text-xs text-red-500">
@@ -271,14 +271,14 @@ export function ProductFormDialog({ open, product, onClose, onSubmit }: Props) {
 
           {/* Preço de venda */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-(--text-primary) mb-1">
               Preço de venda (R$) <span className="text-red-500">*</span>
             </label>
             <input
               type="number"
               step="0.01"
               {...register("unitPrice")}
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 rounded-lg border border-(--border-input) bg-(--bg-surface) text-(--text-primary) text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             {errors.unitPrice && (
               <p className="mt-1 text-xs text-red-500">
@@ -289,14 +289,14 @@ export function ProductFormDialog({ open, product, onClose, onSubmit }: Props) {
 
           {/* Preço de custo */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-(--text-primary) mb-1">
               Preço de custo (R$) <span className="text-red-500">*</span>
             </label>
             <input
               type="number"
               step="0.01"
               {...register("costPrice")}
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 rounded-lg border border-(--border-input) bg-(--bg-surface) text-(--text-primary) text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             {errors.costPrice && (
               <p className="mt-1 text-xs text-red-500">
@@ -307,24 +307,24 @@ export function ProductFormDialog({ open, product, onClose, onSubmit }: Props) {
 
           {/* Descrição */}
           <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-(--text-primary) mb-1">
               Descrição
             </label>
             <textarea
               {...register("description")}
               rows={3}
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              className="w-full px-3 py-2 rounded-lg border border-(--border-input) bg-(--bg-surface) text-(--text-primary) text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               placeholder="Descrição opcional do produto..."
             />
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50">
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-(--border) bg-(--bg-subtle)">
           <button
             type="button"
             onClick={handleClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            className="px-4 py-2 text-sm font-medium text-(--text-primary) bg-(--bg-surface) border border-(--border-input) rounded-lg hover:bg-(--bg-subtle) transition-colors"
           >
             Cancelar
           </button>

@@ -38,8 +38,8 @@ export default async function IssuesPage({
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Issues</h1>
-          <p className="text-gray-500 text-sm mt-0.5">
+          <h1 className="text-2xl font-bold text-(--text-primary)">Issues</h1>
+          <p className="text-(--text-secondary) text-sm mt-0.5">
             {data ? `${data.totalCount} issues encontradas` : "Carregando..."}
           </p>
         </div>
@@ -57,42 +57,42 @@ export default async function IssuesPage({
 
       {/* Tabela */}
       {!data ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-500">
+        <div className="bg-(--bg-surface) rounded-xl border border-(--border) p-8 text-center text-(--text-secondary)">
           Erro ao carregar issues. Verifique se o servidor está rodando.
         </div>
       ) : data.items.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-          <p className="text-gray-500">Nenhuma issue encontrada.</p>
+        <div className="bg-(--bg-surface) rounded-xl border border-(--border) p-12 text-center">
+          <p className="text-(--text-secondary)">Nenhuma issue encontrada.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+        <div className="bg-(--bg-surface) rounded-xl border border-(--border) overflow-hidden shadow-sm">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-(--bg-subtle) border-b border-(--border)">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Título</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Prioridade</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Responsável</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Criada em</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-(--text-secondary) uppercase tracking-wide">Título</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-(--text-secondary) uppercase tracking-wide">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-(--text-secondary) uppercase tracking-wide">Prioridade</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-(--text-secondary) uppercase tracking-wide">Responsável</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-(--text-secondary) uppercase tracking-wide">Criada em</th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-(--border)">
               {data.items.map((issue) => (
-                <tr key={issue.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 font-medium text-gray-900 max-w-xs truncate">
+                <tr key={issue.id} className="hover:bg-(--bg-subtle) transition-colors">
+                  <td className="px-4 py-3 font-medium text-(--text-primary) max-w-xs truncate">
                     {issue.title}
                   </td>
                   <td className="px-4 py-3"><StatusBadge status={issue.status} /></td>
                   <td className="px-4 py-3"><PriorityBadge priority={issue.priority} /></td>
-                  <td className="px-4 py-3 text-gray-500">{issue.assigneeName ?? "—"}</td>
-                  <td className="px-4 py-3 text-gray-500">
+                  <td className="px-4 py-3 text-(--text-secondary)">{issue.assigneeName ?? "—"}</td>
+                  <td className="px-4 py-3 text-(--text-secondary)">
                     {new Date(issue.createdAt).toLocaleDateString("pt-BR")}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-3">
                       {issue.commentsCount > 0 && (
-                        <span className="flex items-center gap-1 text-gray-400 text-xs">
+                        <span className="flex items-center gap-1 text-(--text-muted) text-xs">
                           <MessageSquare size={13} />
                           {issue.commentsCount}
                         </span>
@@ -111,7 +111,7 @@ export default async function IssuesPage({
           </table>
 
           {/* Paginação */}
-          <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between text-sm text-gray-500">
+          <div className="px-4 py-3 border-t border-(--border) flex items-center justify-between text-sm text-(--text-secondary)">
             <span>
               Página {data.pageNumber} de {data.totalPages}
             </span>
@@ -119,7 +119,7 @@ export default async function IssuesPage({
               {data.pageNumber > 1 && (
                 <Link
                   href={`?page=${data.pageNumber - 1}`}
-                  className="px-3 py-1 rounded border border-gray-300 hover:bg-gray-50"
+                  className="px-3 py-1 rounded border border-(--border-input) text-(--text-primary) hover:bg-(--bg-subtle)"
                 >
                   Anterior
                 </Link>
@@ -127,7 +127,7 @@ export default async function IssuesPage({
               {data.pageNumber < data.totalPages && (
                 <Link
                   href={`?page=${data.pageNumber + 1}`}
-                  className="px-3 py-1 rounded border border-gray-300 hover:bg-gray-50"
+                  className="px-3 py-1 rounded border border-(--border-input) text-(--text-primary) hover:bg-(--bg-subtle)"
                 >
                   Próxima
                 </Link>
@@ -150,12 +150,12 @@ function IssueFilters({ current }: { current: SearchParams }) {
         name="search"
         defaultValue={current.search}
         placeholder="Buscar issues..."
-        className="flex-1 min-w-48 px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="flex-1 min-w-48 px-3 py-2 rounded-lg border border-(--border-input) bg-(--bg-surface) text-(--text-primary) text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
       <select
         name="status"
         defaultValue={current.status ?? ""}
-        className="px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="px-3 py-2 rounded-lg border border-(--border-input) bg-(--bg-surface) text-(--text-primary) text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
         <option value="">Todos os status</option>
         {statuses.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -163,7 +163,7 @@ function IssueFilters({ current }: { current: SearchParams }) {
       <select
         name="priority"
         defaultValue={current.priority ?? ""}
-        className="px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="px-3 py-2 rounded-lg border border-(--border-input) bg-(--bg-surface) text-(--text-primary) text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
         <option value="">Todas as prioridades</option>
         {priorities.map((p) => <option key={p} value={p}>{p}</option>)}

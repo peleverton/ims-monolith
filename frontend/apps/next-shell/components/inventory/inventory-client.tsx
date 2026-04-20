@@ -172,8 +172,8 @@ export function InventoryClient({ initialData, searchParams }: Props) {
     <>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Inventário</h1>
-          <p className="text-gray-500 text-sm mt-0.5">
+          <h1 className="text-2xl font-bold text-(--text-primary)">Inventário</h1>
+          <p className="text-(--text-secondary) text-sm mt-0.5">
             {data ? `${data.totalCount} produtos` : "Carregando..."}
           </p>
         </div>
@@ -207,12 +207,12 @@ export function InventoryClient({ initialData, searchParams }: Props) {
           name="search"
           defaultValue={searchParams.search}
           placeholder="Buscar por nome, SKU..."
-          className="flex-1 min-w-48 px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="flex-1 min-w-48 px-3 py-2 rounded-lg border border-(--border-input) bg-(--bg-surface) text-(--text-primary) text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <select
           name="category"
           defaultValue={searchParams.category ?? ""}
-          className="px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="px-3 py-2 rounded-lg border border-(--border-input) bg-(--bg-surface) text-(--text-primary) text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="">Todas as categorias</option>
           {CATEGORIES.map((c) => (
@@ -224,7 +224,7 @@ export function InventoryClient({ initialData, searchParams }: Props) {
         <select
           name="stockStatus"
           defaultValue={searchParams.stockStatus ?? ""}
-          className="px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="px-3 py-2 rounded-lg border border-(--border-input) bg-(--bg-surface) text-(--text-primary) text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="">Todos os status</option>
           {STOCK_STATUSES.map((s) => (
@@ -243,50 +243,50 @@ export function InventoryClient({ initialData, searchParams }: Props) {
 
       {/* Tabela */}
       {!data ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-500">
+        <div className="bg-(--bg-surface) rounded-xl border border-(--border) p-8 text-center text-(--text-secondary)">
           Erro ao carregar produtos. Verifique se o servidor está rodando.
         </div>
       ) : data.items.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-          <p className="text-gray-500">Nenhum produto encontrado.</p>
+        <div className="bg-(--bg-surface) rounded-xl border border-(--border) p-12 text-center">
+          <p className="text-(--text-secondary)">Nenhum produto encontrado.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+        <div className="bg-(--bg-surface) rounded-xl border border-(--border) overflow-hidden shadow-sm">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-(--bg-subtle) border-b border-(--border)">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-(--text-secondary) uppercase tracking-wide">
                   Nome / SKU
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-(--text-secondary) uppercase tracking-wide">
                   Categoria
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                <th className="px-4 py-3 text-right text-xs font-semibold text-(--text-secondary) uppercase tracking-wide">
                   Estoque
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                <th className="px-4 py-3 text-right text-xs font-semibold text-(--text-secondary) uppercase tracking-wide">
                   Preço
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-(--text-secondary) uppercase tracking-wide">
                   Status
                 </th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
-            <tbody className={`divide-y divide-gray-100 ${isPending ? "opacity-50" : ""}`}>
+            <tbody className={`divide-y divide-(--border) ${isPending ? "opacity-50" : ""}`}>
               {data.items.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                <tr key={item.id} className="hover:bg-(--bg-subtle) transition-colors">
                   <td className="px-4 py-3">
-                    <div className="font-medium text-gray-900 truncate max-w-xs">
+                    <div className="font-medium text-(--text-primary) truncate max-w-xs">
                       {item.name}
                     </div>
-                    <div className="text-xs text-gray-400 font-mono">{item.sku}</div>
+                    <div className="text-xs text-(--text-muted) font-mono">{item.sku}</div>
                   </td>
-                  <td className="px-4 py-3 text-gray-600">{item.category}</td>
-                  <td className="px-4 py-3 text-right font-mono text-gray-700">
+                  <td className="px-4 py-3 text-(--text-secondary)">{item.category}</td>
+                  <td className="px-4 py-3 text-right font-mono text-(--text-primary)">
                     {item.currentStock}
                   </td>
-                  <td className="px-4 py-3 text-right text-gray-700">
+                  <td className="px-4 py-3 text-right text-(--text-primary)">
                     {item.unitPrice.toLocaleString("pt-BR", {
                       style: "currency",
                       currency: "BRL",
@@ -300,28 +300,28 @@ export function InventoryClient({ initialData, searchParams }: Props) {
                       <button
                         onClick={() => openAdjust(item)}
                         title="Ajustar estoque"
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                        className="p-1.5 rounded-lg text-(--text-muted) hover:text-blue-600 hover:bg-blue-50 transition-colors"
                       >
                         <RefreshCw size={15} />
                       </button>
                       <button
                         onClick={() => router.push(`/inventory/${item.id}`)}
                         title="Ver movimentações"
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-purple-600 hover:bg-purple-50 transition-colors"
+                        className="p-1.5 rounded-lg text-(--text-muted) hover:text-purple-600 hover:bg-purple-50 transition-colors"
                       >
                         <BarChart3 size={15} />
                       </button>
                       <button
                         onClick={() => openEdit(item)}
                         title="Editar"
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors"
+                        className="p-1.5 rounded-lg text-(--text-muted) hover:text-green-600 hover:bg-green-50 transition-colors"
                       >
                         <Pencil size={15} />
                       </button>
                       <button
                         onClick={() => openDelete(item)}
                         title="Excluir"
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                        className="p-1.5 rounded-lg text-(--text-muted) hover:text-red-600 hover:bg-red-50 transition-colors"
                       >
                         <Trash2 size={15} />
                       </button>
@@ -333,7 +333,7 @@ export function InventoryClient({ initialData, searchParams }: Props) {
           </table>
 
           {/* Paginação */}
-          <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between text-sm text-gray-500">
+          <div className="px-4 py-3 border-t border-(--border) flex items-center justify-between text-sm text-(--text-secondary)">
             <span>
               Página {data.pageNumber} de {data.totalPages}
             </span>
@@ -341,7 +341,7 @@ export function InventoryClient({ initialData, searchParams }: Props) {
               {data.pageNumber > 1 && (
                 <button
                   onClick={() => navigate({ page: String(data.pageNumber - 1) })}
-                  className="px-3 py-1 rounded border border-gray-300 hover:bg-gray-50"
+                  className="px-3 py-1 rounded border border-(--border-input) text-(--text-primary) hover:bg-(--bg-subtle)"
                 >
                   Anterior
                 </button>
@@ -349,7 +349,7 @@ export function InventoryClient({ initialData, searchParams }: Props) {
               {data.pageNumber < data.totalPages && (
                 <button
                   onClick={() => navigate({ page: String(data.pageNumber + 1) })}
-                  className="px-3 py-1 rounded border border-gray-300 hover:bg-gray-50"
+                  className="px-3 py-1 rounded border border-(--border-input) text-(--text-primary) hover:bg-(--bg-subtle)"
                 >
                   Próxima
                 </button>

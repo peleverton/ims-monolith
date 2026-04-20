@@ -79,14 +79,14 @@ export function AdjustStockDialog({
       onClose={onClose}
       className="w-full max-w-md rounded-xl shadow-xl p-0 backdrop:bg-black/40 open:flex open:flex-col"
     >
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-(--border)">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">Ajustar Estoque</h2>
+          <h2 className="text-lg font-semibold text-(--text-primary)">Ajustar Estoque</h2>
           {productName && (
-            <p className="text-sm text-gray-500 mt-0.5">
+            <p className="text-sm text-(--text-secondary) mt-0.5">
               {productName}
               {currentStock !== undefined && (
-                <span className="ml-2 font-medium text-gray-700">
+                <span className="ml-2 font-medium text-(--text-primary)">
                   (atual: {currentStock})
                 </span>
               )}
@@ -95,7 +95,7 @@ export function AdjustStockDialog({
         </div>
         <button
           onClick={onClose}
-          className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+          className="p-1 rounded-lg text-(--text-muted) hover:text-(--text-primary) hover:bg-(--bg-subtle) transition-colors"
           aria-label="Fechar"
         >
           <X size={20} />
@@ -104,12 +104,12 @@ export function AdjustStockDialog({
 
       <form onSubmit={handleSubmit(onSubmit)} className="px-6 py-5 space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-(--text-primary) mb-1">
             Tipo de movimentação <span className="text-red-500">*</span>
           </label>
           <select
             {...register("movementType")}
-            className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 rounded-lg border border-(--border-input) bg-(--bg-surface) text-(--text-primary) text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             {MOVEMENT_TYPES.map((m) => (
               <option key={m.value} value={m.value}>
@@ -120,14 +120,14 @@ export function AdjustStockDialog({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-(--text-primary) mb-1">
             Quantidade <span className="text-red-500">*</span>
           </label>
           <input
             type="number"
             min={1}
             {...register("quantity")}
-            className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 rounded-lg border border-(--border-input) bg-(--bg-surface) text-(--text-primary) text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           {errors.quantity && (
             <p className="mt-1 text-xs text-red-500">{errors.quantity.message}</p>
@@ -135,24 +135,24 @@ export function AdjustStockDialog({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-(--text-primary) mb-1">
             Referência / NF
           </label>
           <input
             {...register("reference")}
             placeholder="NF-001, PO-002..."
-            className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 rounded-lg border border-(--border-input) bg-(--bg-surface) text-(--text-primary) text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-(--text-primary) mb-1">
             Observações
           </label>
           <textarea
             {...register("notes")}
             rows={2}
-            className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            className="w-full px-3 py-2 rounded-lg border border-(--border-input) bg-(--bg-surface) text-(--text-primary) text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
           />
         </div>
 
@@ -160,7 +160,7 @@ export function AdjustStockDialog({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            className="px-4 py-2 text-sm font-medium text-(--text-primary) bg-(--bg-surface) border border-(--border-input) rounded-lg hover:bg-(--bg-subtle) transition-colors"
           >
             Cancelar
           </button>
