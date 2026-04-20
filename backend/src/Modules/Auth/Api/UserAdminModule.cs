@@ -68,13 +68,13 @@ public class UserAdminModule : IEndpointModule
             return Results.ValidationProblem(validation.ToDictionary());
 
         var result = await svc.UpdateUserRoleAsync(id, request.RoleName, ct);
-        return result ? Results.Ok() : Results.NotFound();
+        return result ? Results.NoContent() : Results.NotFound();
     }
 
     private static async Task<IResult> ActivateUser(Guid id, IUserAdminService svc, CancellationToken ct)
     {
         var result = await svc.SetUserActiveAsync(id, true, ct);
-        return result ? Results.Ok() : Results.NotFound();
+        return result ? Results.NoContent() : Results.NotFound();
     }
 
     private static async Task<IResult> DeactivateUser(
@@ -88,7 +88,7 @@ public class UserAdminModule : IEndpointModule
             return Results.BadRequest(new { message = "Você não pode desativar sua própria conta." });
 
         var result = await svc.SetUserActiveAsync(id, false, ct);
-        return result ? Results.Ok() : Results.NotFound();
+        return result ? Results.NoContent() : Results.NotFound();
     }
 
     private static async Task<IResult> InviteUser(

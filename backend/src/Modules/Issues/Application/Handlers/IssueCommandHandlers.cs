@@ -3,6 +3,7 @@ using IMS.Modular.Modules.Issues.Application.DTOs;
 using IMS.Modular.Modules.Issues.Application.Mappings;
 using IMS.Modular.Modules.Issues.Domain.Entities;
 using IMS.Modular.Modules.Issues.Infrastructure;
+using IMS.Modular.Shared.Abstractions;
 using IMS.Modular.Shared.Domain;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +13,7 @@ namespace IMS.Modular.Modules.Issues.Application.Handlers;
 
 public sealed class CreateIssueCommandHandler(
     IssuesDbContext db,
+    ICacheService cache,
     ILogger<CreateIssueCommandHandler> logger)
     : IRequestHandler<CreateIssueCommand, Result<IssueDto>>
 {
@@ -23,7 +25,8 @@ public sealed class CreateIssueCommandHandler(
         db.Issues.Add(issue);
         await db.SaveChangesAsync(ct);
 
-        logger.LogInformation("Issue created: {IssueId}", issue.Id);
+        await cache.RemoveByPrefixAsync("issues-list", ct);
+        logger.LogInformation("Issue created: {IssueId} — cache invalidated", issue.Id);
         return Result<IssueDto>.Success(IssueMapper.ToDto(issue));
     }
 }

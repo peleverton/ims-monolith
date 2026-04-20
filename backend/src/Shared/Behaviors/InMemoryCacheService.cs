@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text.Json;
 using IMS.Modular.Shared.Abstractions;
 using Microsoft.Extensions.Caching.Memory;
@@ -11,6 +12,7 @@ namespace IMS.Modular.Shared.Behaviors;
 public sealed class InMemoryCacheService : ICacheService
 {
     private readonly IMemoryCache _cache;
+    private readonly ConcurrentDictionary<string, byte> _keys = new();
 
     public InMemoryCacheService(IMemoryCache cache)
     {
@@ -32,13 +34,28 @@ public sealed class InMemoryCacheService : ICacheService
         else
             options.SetSlidingExpiration(TimeSpan.FromMinutes(5));
 
+        options.RegisterPostEvictionCallback((k, _, _, _) => _keys.TryRemove(k.ToString()!, out _));
+
+        _keys.TryAdd(key, 0);
         _cache.Set(key, value, options);
         return Task.CompletedTask;
     }
 
     public Task RemoveAsync(string key, CancellationToken cancellationToken = default)
     {
+        _keys.TryRemove(key, out _);
         _cache.Remove(key);
+        return Task.CompletedTask;
+    }
+
+    public Task RemoveByPrefixAsync(string prefix, CancellationToken cancellationToken = default)
+    {
+        var keysToRemove = _keys.Keys.Where(k => k.StartsWith(prefix)).ToList();
+        foreach (var key in keysToRemove)
+        {
+            _keys.TryRemove(key, out _);
+            _cache.Remove(key);
+        }
         return Task.CompletedTask;
     }
 

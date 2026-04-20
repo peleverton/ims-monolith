@@ -2,6 +2,7 @@ using System.Text.Json;
 using IMS.Modular.Shared.Abstractions;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
+using StackExchange.Redis;
 
 namespace IMS.Modular.Shared.Behaviors;
 
@@ -13,6 +14,7 @@ namespace IMS.Modular.Shared.Behaviors;
 public sealed class RedisCacheService : ICacheService
 {
     private readonly IDistributedCache _cache;
+    private readonly IConnectionMultiplexer? _multiplexer;
     private readonly ILogger<RedisCacheService> _logger;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -21,10 +23,11 @@ public sealed class RedisCacheService : ICacheService
         WriteIndented = false
     };
 
-    public RedisCacheService(IDistributedCache cache, ILogger<RedisCacheService> logger)
+    public RedisCacheService(IDistributedCache cache, ILogger<RedisCacheService> logger, IConnectionMultiplexer? multiplexer = null)
     {
         _cache = cache;
         _logger = logger;
+        _multiplexer = multiplexer;
     }
 
     public async Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default)
@@ -99,6 +102,32 @@ public sealed class RedisCacheService : ICacheService
         {
             _logger.LogWarning(ex, "[RedisCacheService] EXISTS failed for key: {CacheKey}", key);
             return false;
+        }
+    }
+
+    public async Task RemoveByPrefixAsync(string prefix, CancellationToken cancellationToken = default)
+    {
+        if (_multiplexer is null)
+        {
+            _logger.LogWarning("[RedisCacheService] REMOVE_BY_PREFIX skipped — no IConnectionMultiplexer registered. Prefix: {Prefix}", prefix);
+            return;
+        }
+
+        try
+        {
+            var db = _multiplexer.GetDatabase();
+            var server = _multiplexer.GetServers().FirstOrDefault();
+            if (server is null) return;
+
+            var keys = server.Keys(pattern: $"{prefix}:*").ToArray();
+            if (keys.Length > 0)
+                await db.KeyDeleteAsync(keys);
+
+            _logger.LogInformation("[RedisCacheService] REMOVE_BY_PREFIX removed {Count} keys for prefix: {Prefix}", keys.Length, prefix);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[RedisCacheService] REMOVE_BY_PREFIX failed for prefix: {Prefix}", prefix);
         }
     }
 }

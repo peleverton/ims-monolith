@@ -1,6 +1,7 @@
 using IMS.Modular.Shared.Abstractions;
 using IMS.Modular.Shared.Behaviors;
 using Microsoft.AspNetCore.OutputCaching;
+using StackExchange.Redis;
 
 namespace IMS.Modular.Shared.Caching;
 
@@ -52,6 +53,10 @@ public static class CacheExtensions
                 options.Configuration = redisConnectionString;
                 options.InstanceName = "IMS:";
             });
+
+            // Register IConnectionMultiplexer for RemoveByPrefixAsync support
+            services.AddSingleton<IConnectionMultiplexer>(_ =>
+                ConnectionMultiplexer.Connect(redisConnectionString!));
 
             // ICacheService → RedisCacheService (wraps IDistributedCache with JSON serialization)
             services.AddSingleton<ICacheService, RedisCacheService>();
