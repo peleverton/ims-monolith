@@ -5,6 +5,7 @@ using IMS.Modular.Modules.Issues.Domain.Entities;
 using IMS.Modular.Modules.Issues.Infrastructure;
 using IMS.Modular.Shared.Abstractions;
 using IMS.Modular.Shared.Domain;
+using IMS.Modular.Shared.Observability;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -19,11 +20,19 @@ public sealed class CreateIssueCommandHandler(
 {
     public async Task<Result<IssueDto>> Handle(CreateIssueCommand request, CancellationToken ct)
     {
+        // US-043: custom span para rastreamento no Jaeger
+        using var activity = OpenTelemetryExtensions.ActivitySource.StartActivity("CreateIssue");
+        activity?.SetTag("issue.title", request.Title);
+        activity?.SetTag("issue.priority", request.Priority.ToString());
+        activity?.SetTag("issue.reporter_id", request.ReporterId.ToString());
+
         logger.LogInformation("Creating issue: Title='{Title}', Reporter={ReporterId}", request.Title, request.ReporterId);
 
         var issue = new Issue(request.Title, request.Description, request.Priority, request.ReporterId, request.DueDate);
         db.Issues.Add(issue);
         await db.SaveChangesAsync(ct);
+
+        activity?.SetTag("issue.id", issue.Id.ToString());
 
         await cache.RemoveByPrefixAsync("issues-list", ct);
         logger.LogInformation("Issue created: {IssueId} — cache invalidated", issue.Id);

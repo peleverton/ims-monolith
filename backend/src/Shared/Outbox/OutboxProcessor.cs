@@ -1,4 +1,5 @@
 using IMS.Modular.Shared.Abstractions;
+using IMS.Modular.Shared.Observability;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -60,6 +61,14 @@ public sealed class OutboxProcessor(
         {
             try
             {
+                // US-043: span por mensagem processada no Outbox
+                using var activity = OpenTelemetryExtensions.ActivitySource.StartActivity("Outbox.PublishMessage");
+                activity?.SetTag("outbox.message_id", msg.Id.ToString());
+                activity?.SetTag("outbox.exchange", msg.Exchange);
+                activity?.SetTag("outbox.routing_key", msg.RoutingKey);
+                activity?.SetTag("outbox.message_type", msg.MessageType);
+                activity?.SetTag("outbox.retry_count", msg.RetryCount);
+
                 // Deserializa usando o tipo original
                 var type = Type.GetType(msg.MessageType);
                 if (type is null)
@@ -86,6 +95,7 @@ public sealed class OutboxProcessor(
                 await (Task)publishMethod.Invoke(messageBus, [msg.Exchange, msg.RoutingKey, payload, cancellationToken])!;
 
                 msg.ProcessedAt = DateTime.UtcNow;
+                activity?.SetTag("outbox.success", true);
                 logger.LogDebug("[Outbox] Message {Id} published successfully", msg.Id);
             }
             catch (Exception ex)

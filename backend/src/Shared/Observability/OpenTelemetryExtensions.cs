@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
+using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -78,24 +79,15 @@ public static class OpenTelemetryExtensions
                     .AddHttpClientInstrumentation(options => options.RecordException = true)
                     .AddSource(ActivitySource.Name);
 
-                // Jaeger exporter (US-027)
-                var jaegerEndpoint = section.GetValue<string>("JaegerEndpoint");
-                if (!string.IsNullOrWhiteSpace(jaegerEndpoint))
-                {
-                    tracing.AddJaegerExporter(options =>
-                    {
-                        var uri = new Uri(jaegerEndpoint);
-                        options.AgentHost = uri.Host;
-                        options.AgentPort = uri.Port;
-                    });
-                }
-
-                // OTLP exporter
+                // US-043: OTLP exporter (Jaeger, Grafana Tempo, etc.)
                 var otlpEndpoint = section.GetValue<string>("OtlpEndpoint");
                 if (!string.IsNullOrWhiteSpace(otlpEndpoint))
                 {
                     tracing.AddOtlpExporter(options =>
-                        options.Endpoint = new Uri(otlpEndpoint));
+                    {
+                        options.Endpoint = new Uri(otlpEndpoint);
+                        options.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
+                    });
                 }
             })
             .WithMetrics(metrics =>

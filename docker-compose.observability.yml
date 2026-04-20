@@ -1,17 +1,29 @@
 # =============================================================
-# US-025: docker-compose.observability.yml
-# Overlay de observabilidade: Prometheus + Grafana
+# US-025 / US-043: docker-compose.observability.yml
+# Overlay de observabilidade: Prometheus + Grafana + Jaeger
 # =============================================================
 # Uso (combinado com docker-compose.yml):
 #   docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
 #
-# Grafana UI:   http://localhost:3000  (admin / admin)
+# Grafana UI:   http://localhost:3100  (admin / admin)
 # Prometheus:   http://localhost:9090
+# Jaeger UI:    http://localhost:16686
 # =============================================================
 
 version: "3.9"
 
 services:
+
+  # ─────────────────────────────────────────────────────────
+  # US-043: Override do serviço app para habilitar OTLP → Jaeger
+  # ─────────────────────────────────────────────────────────
+  app:
+    environment:
+      OpenTelemetry__OtlpEndpoint: "http://jaeger:4317"
+      OpenTelemetry__ServiceName: "ims-monolith"
+    depends_on:
+      jaeger:
+        condition: service_healthy
 
   # ─────────────────────────────────────────────────────────
   # Prometheus
@@ -46,7 +58,7 @@ services:
     container_name: ims-grafana
     restart: unless-stopped
     ports:
-      - "${GRAFANA_PORT:-3000}:3000"
+      - "${GRAFANA_PORT:-3100}:3000"
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}

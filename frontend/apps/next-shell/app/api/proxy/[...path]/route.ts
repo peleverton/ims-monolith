@@ -40,6 +40,12 @@ async function proxyRequest(
   const correlationId = request.headers.get("X-Correlation-Id");
   if (correlationId) headers["X-Correlation-Id"] = correlationId;
 
+  // US-043: propagar W3C Trace Context para correlação frontend ↔ backend no Jaeger
+  const traceparent = request.headers.get("traceparent");
+  if (traceparent) headers["traceparent"] = traceparent;
+  const tracestate = request.headers.get("tracestate");
+  if (tracestate) headers["tracestate"] = tracestate;
+
   // Body para métodos que enviam payload
   let body: BodyInit | null = null;
   const method = request.method;
