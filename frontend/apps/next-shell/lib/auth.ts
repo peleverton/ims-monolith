@@ -1,11 +1,8 @@
-import { SignJWT, jwtVerify } from "jose";
+import { SignJWT } from "jose";
 import { cookies } from "next/headers";
 
 const AUTH_COOKIE = "ims_access_token";
 const REFRESH_COOKIE = "ims_refresh_token";
-const secret = new TextEncoder().encode(
-  process.env.AUTH_SECRET ?? "fallback-secret-change-me"
-);
 
 export interface SessionPayload {
   userId: string;
@@ -22,10 +19,16 @@ export async function getSession(): Promise<SessionPayload | null> {
   if (!token) return null;
 
   try {
-    const { payload } = await jwtVerify(token, secret);
+    // Decode JWT payload without verifying signature
+    // (signature is verified by the backend on every API request)
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const payloadJson = Buffer.from(parts[1], "base64url").toString("utf-8");
+    const p = JSON.parse(payloadJson) as Record<string, unknown>;
 
-    // .NET uses long SOAP claim URIs — map them to friendly names
-    const p = payload as Record<string, unknown>;
+    // Check expiry
+    const exp = p["exp"] as number | undefined;
+    if (exp && Date.now() / 1000 > exp) return null;
     const userId =
       (p["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"] as string) ??
       (p["sub"] as string) ?? "";

@@ -19,6 +19,10 @@ async function proxyRequest(
   const cookieStore = await cookies();
   const token = cookieStore.get(AUTH_COOKIE)?.value;
 
+  if (!token) {
+    console.warn(`[proxy] No auth token in cookie for ${request.method} ${request.nextUrl.pathname}`);
+  }
+
   // Monta URL destino: /api/proxy/issues/123 → http://app:8080/api/issues/123
   const path = params.path.join("/");
   const search = request.nextUrl.search;
