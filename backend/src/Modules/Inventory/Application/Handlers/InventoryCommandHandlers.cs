@@ -5,6 +5,7 @@ using IMS.Modular.Modules.Inventory.Domain;
 using IMS.Modular.Modules.Inventory.Domain.Entities;
 using IMS.Modular.Shared.Abstractions;
 using IMS.Modular.Shared.Domain;
+using IMS.Modular.Shared.Observability;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -99,6 +100,12 @@ public sealed class AdjustStockCommandHandler(
 {
     public async Task<Result<ProductDto>> Handle(AdjustStockCommand cmd, CancellationToken ct)
     {
+        // US-049: custom span for Jaeger tracing
+        using var activity = OpenTelemetryExtensions.ActivitySource.StartActivity("AdjustStock");
+        activity?.SetTag("inventory.product_id", cmd.ProductId.ToString());
+        activity?.SetTag("inventory.movement_type", cmd.MovementType.ToString());
+        activity?.SetTag("inventory.quantity", cmd.Quantity);
+
         var product = await productRepo.GetByIdAsync(cmd.ProductId, ct);
         if (product is null) return Result<ProductDto>.NotFound($"Product {cmd.ProductId} not found.");
 
@@ -114,6 +121,8 @@ public sealed class AdjustStockCommandHandler(
 
         await cache.RemoveAsync($"inventory-product-{cmd.ProductId}", ct);
         await cache.RemoveByPrefixAsync("inventory-products-list", ct);
+
+        activity?.SetTag("inventory.new_stock", product.CurrentStock);
         logger.LogInformation("Stock adjusted: Product={ProductId} Qty={Qty} Type={Type}",
             cmd.ProductId, cmd.Quantity, cmd.MovementType);
         return Result<ProductDto>.Success(InventoryMapper.ToDto(product));
