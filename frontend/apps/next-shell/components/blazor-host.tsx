@@ -33,6 +33,12 @@ export function BlazorHost({ mountDelay = 100 }: BlazorHostProps) {
       },
     };
 
+    // If Blazor already started in a previous render (SPA navigation), skip probe.
+    if ((window as any).__blazorStarted) {
+      setBlazorAvailable(true);
+      return;
+    }
+
     // Probe before loading any Blazor script — avoids the uncaught promise
     // error from blazor.webassembly.js that freezes input event handlers.
     fetch('/_blazor/_framework/blazor.webassembly.js', { method: 'HEAD' })
@@ -43,6 +49,9 @@ export function BlazorHost({ mountDelay = 100 }: BlazorHostProps) {
   // Don't render Blazor scripts at all when the framework files are absent.
   if (blazorAvailable === false) return null;
   if (blazorAvailable === null) return null; // still probing
+
+  // If already started, no need to inject scripts again.
+  if ((window as any).__blazorStarted) return null;
 
   return (
     <>

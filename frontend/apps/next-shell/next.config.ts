@@ -18,6 +18,18 @@ const nextConfig: NextConfig = {
       },
       // NOTE: Blazor WASM static files are served directly from public/_blazor/
       // Do NOT proxy /_blazor/ to backend — Next.js serves them as static files.
+
+      // Blazor's dotnet.js makes dynamic imports relative to the page baseURI,
+      // producing /_framework/* and /_content/* (without the /_blazor/ prefix).
+      // These rewrites transparently redirect those requests to the correct paths.
+      {
+        source: "/_framework/:path*",
+        destination: "/_blazor/_framework/:path*",
+      },
+      {
+        source: "/_content/:path*",
+        destination: "/_blazor/_content/:path*",
+      },
     ];
   },
   async headers() {

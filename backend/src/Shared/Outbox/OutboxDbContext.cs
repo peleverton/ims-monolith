@@ -18,10 +18,10 @@ public class OutboxDbContext(DbContextOptions<OutboxDbContext> options) : DbCont
         {
             entity.ToTable("OutboxMessages");
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.MessageType).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.MessageType).IsRequired().HasColumnType("text");
             entity.Property(e => e.Exchange).IsRequired().HasMaxLength(200);
             entity.Property(e => e.RoutingKey).IsRequired().HasMaxLength(200);
-            entity.Property(e => e.Payload).IsRequired();
+            entity.Property(e => e.Payload).IsRequired().HasColumnType("text");
             entity.Property(e => e.LastError).HasMaxLength(2000);
 
             // Índice para busca eficiente de mensagens pendentes
