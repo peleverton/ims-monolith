@@ -349,10 +349,58 @@ O token JWT **nunca** é exposto ao JavaScript do browser.
 ## Frontend — Blazor WASM
 
 - Framework: **.NET 9 Blazor WASM** com **MudBlazor**
-- Compilado como **Custom Elements** para integração no Next.js via `<BlazorHost>`
+- Compilado como **Custom Elements** para integração no Next.js via componente `<BlazorHost>`
+- Os artefatos compilados (`.wasm`, `.dll`, `blazor.webassembly.js`) são copiados para `public/_blazor/` durante o build do Next.js
 - Componentes principais:
-  - `InventoryGrid` — MudDataGrid com CRUD
-  - `AnalyticsDashboard` — Charts e KPIs em tempo real
+  - `InventoryGrid` — MudDataGrid com CRUD completo de produtos
+  - `AnalyticsDashboard` — Charts (linha, donut, barra) e KPI cards com dados em tempo real
+
+### Integração Next.js ↔ Blazor WASM
+
+O Blazor é servido como micro-frontend embarcado no Next.js. O fluxo é:
+
+```
+Next.js page → <BlazorHost> component
+  → carrega /public/_blazor/blazor.webassembly.js
+  → carrega /public/_blazor/_framework/* (dotnet.wasm, dotnet.js, …)
+  → renderiza <inventory-grid> ou <analytics-dashboard> (Custom Elements)
+```
+
+**Rewrites no `next.config.ts`** garantem que as requisições dos Custom Elements
+aos caminhos `/_framework/*` e `/_content/*` sejam resolvidas para os arquivos
+estáticos corretos em `public/_blazor/`:
+
+```ts
+// next.config.ts — beforeFiles rewrites
+{ source: '/_framework/:path*', destination: '/public/_blazor/_framework/:path*' },
+{ source: '/_content/:path*',   destination: '/public/_blazor/_content/:path*'  },
+// also handles page-prefixed paths (e.g. /analytics/_framework/...)
+```
+
+**Build automático do Blazor** — o script `predev` no `package.json` do Next.js
+garante que o Blazor seja sempre recompilado antes de `next dev` / `next build`
+em ambiente local:
+
+```json
+"predev":  "bash ../../scripts/build-blazor.sh",
+"prebuild": "bash ../../scripts/build-blazor.sh"
+```
+
+> No Docker, o build do Blazor é feito diretamente no `Dockerfile.frontend`
+> antes do `next build`, sem usar o script `prebuild` do npm para evitar
+> conflitos na imagem.
+
+### Comunicação Blazor → Backend (via BFF)
+
+O `HttpClient` configurado no Blazor aponta para `/api/proxy/` (mesmo origem).
+O Next.js BFF (`app/api/proxy/[...path]/route.ts`) injeta o token JWT do cookie
+HttpOnly antes de repassar a requisição ao backend .NET:
+
+```
+Blazor WASM → GET /api/proxy/analytics/dashboard
+  → Next.js BFF (injeta Bearer token do cookie ims_access_token)
+  → GET http://app:8080/api/analytics/dashboard  (200 OK)
+```
 
 ---
 
@@ -363,6 +411,17 @@ O token JWT **nunca** é exposto ao JavaScript do browser.
 - ORM: **EF Core 9** com migrations por módulo
 - Cada módulo tem seu próprio `DbContext`
 - Migrations são aplicadas automaticamente no startup (Development) ou via CI (Production)
+- **Dapper** é usado nas queries de leitura (Analytics, Inventory read models) — todas as queries usam sintaxe PostgreSQL com identificadores entre aspas duplas (`"TableName"`) pois o PostgreSQL é case-sensitive
+
+### Convenções de queries Dapper (PostgreSQL)
+
+| Regra | Exemplo |
+|---|---|
+| Nomes de tabelas/colunas entre aspas duplas | `SELECT "Status" FROM "Issues"` |
+| Cast explícito para tipos C# | `COUNT(*)::int`, `AVG(...)::float8` |
+| Alias PascalCase para mapear para records C# | `COUNT(*) AS "Count"` |
+| Booleanos: usar `true`/`false` literal | `WHERE "IsActive" = true` |
+| Datas: usar `CURRENT_DATE`, `INTERVAL '30 days'` | `WHERE "CreatedAt" >= CURRENT_DATE - INTERVAL '30 days'` |
 
 ### Rodando migrations manualmente
 
@@ -603,6 +662,41 @@ O `dotnet publish` precisa apontar explicitamente para o `.csproj`:
 RUN dotnet publish -c Release --no-restore -o /publish \
     /p:UseAppHost=false backend/src/*.csproj
 ```
+
+### Analytics dashboard retorna 422 no Blazor
+
+O erro `422 Unprocessable Entity` nas chamadas `/api/proxy/analytics/*` indica
+que o token JWT não está sendo enviado. Verifique:
+
+1. Se o cookie `ims_access_token` existe no browser (DevTools → Application → Cookies)
+2. Se o Next.js BFF está rodando (container `ims-frontend` healthy)
+3. Se o `HttpClient` do Blazor aponta para a URL correta (deve usar `/api/proxy/`, não a URL direta do backend)
+
+### Recursos Blazor retornam 404 (`_framework/dotnet.js`, `_content/*`)
+
+Os arquivos estáticos do Blazor WASM precisam estar em `public/_blazor/` no Next.js. Se estiverem faltando:
+
+```bash
+# Recompilar o Blazor e copiar para public/
+bash scripts/build-blazor.sh
+
+# Ou em dev local:
+cd frontend/apps/next-shell
+npm run dev   # executa predev que chama build-blazor.sh automaticamente
+```
+
+Para rebuild completo do Docker:
+```bash
+docker compose build --no-cache frontend
+docker compose up -d
+```
+
+### "Blazor has already started" no console
+
+Aviso benigno que ocorre em navegação SPA — o Blazor runtime não pode ser
+iniciado duas vezes na mesma página. O componente `<BlazorHost>` já possui
+guards para evitar o segundo `Blazor.start()`. O aviso pode ser ignorado com
+segurança.
 
 ---
 

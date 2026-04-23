@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "blazor:build": "bash ../../../scripts/build-blazor.sh",
+    "predev": "npm run blazor:build",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",

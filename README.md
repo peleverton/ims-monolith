@@ -162,13 +162,15 @@ ims-modular/
 
 ## Tech Stack
 
+### Backend
+
 | Category | Technology | Version |
 |----------|-----------|---------|
 | Runtime | .NET | 9.0 |
 | Framework | ASP.NET Core Minimal API | 9.x |
 | ORM (Write) | Entity Framework Core | 9.x |
 | Data Access (Read) | Dapper | 2.x |
-| Database | SQLite (dev) / PostgreSQL (prod) | — |
+| Database | PostgreSQL 16 | 16.x |
 | CQRS | MediatR | 12.x |
 | Validation | FluentValidation | 11.x |
 | Auth | JWT Bearer (Microsoft.AspNetCore.Authentication.JwtBearer) | 9.x |
@@ -184,6 +186,22 @@ ims-modular/
 | Output Caching | ASP.NET Core Output Caching | 9.x |
 | API Docs | Swashbuckle (Swagger) | 7.x |
 
+### Frontend
+
+| Category | Technology | Version |
+|----------|-----------|---------|
+| Shell | Next.js (App Router) | 15.x |
+| Language | TypeScript | 5.x (strict) |
+| Styling | Tailwind CSS | 4.x |
+| UI Components | Radix UI / shadcn | — |
+| Forms | react-hook-form + zod | — |
+| i18n | next-intl | — |
+| Dark Mode | next-themes | — |
+| Real-Time | @microsoft/signalr | — |
+| Micro-Frontend | Blazor WASM (Custom Elements) | .NET 9 |
+| Component Library | MudBlazor | — |
+| E2E Tests | Playwright | — |
+
 ---
 
 ## Getting Started
@@ -191,64 +209,54 @@ ims-modular/
 ### Prerequisites
 
 - [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
+- [Node.js 20 LTS](https://nodejs.org/)
 - A terminal (bash, zsh, PowerShell)
-- [Docker](https://www.docker.com/) (optional, for full-stack local dev)
+- [Docker](https://www.docker.com/) (recommended, for full-stack local dev)
 
-### Run (local — SQLite, sem Docker)
-
-```bash
-cd src
-dotnet restore
-dotnet build
-dotnet run --urls http://localhost:5049
-```
-
-The API will be available at **http://localhost:5049**.
-
-Swagger UI: **http://localhost:5049**
-
-### Run (local — com Docker Compose: RabbitMQ + Redis)
+### ▶️ Quick Start (Docker — recommended)
 
 ```bash
-# Sobe RabbitMQ + Redis para desenvolvimento
-docker compose -f docker-compose.dev.yml up -d
+# 1. Clone and enter the repo
+git clone https://github.com/peleverton/ims-monolith.git
+cd ims-monolith
 
-# Roda a aplicação em modo Development (SQLite)
-dotnet run --project src/ims-monolith.csproj --urls http://localhost:5049
-```
-
-### Deploy (full-stack com Docker Compose)
-
-```bash
-# 1. Configure as variáveis de ambiente
-cp .env.example .env
-# edite .env com suas credenciais
-
-# 2. Suba toda a stack (app + PostgreSQL + Redis + RabbitMQ)
+# 2. Start the full stack
 docker compose up -d
+```
 
-# 3. Overlay opcional de observabilidade (Prometheus + Grafana)
+| Service | URL |
+|---------|-----|
+| **Frontend (Next.js)** | http://localhost:3000 |
+| **API (.NET)** | http://localhost:8080 |
+| Swagger UI | http://localhost:8080/swagger |
+| PostgreSQL | localhost:5432 |
+| Redis | localhost:6379 |
+| RabbitMQ UI | http://localhost:15672 (ims / ims) |
+
+> Default login: `admin@ims.com` / `Admin@123`
+
+### (Optional) With Observability
+
+```bash
 docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
 ```
 
-| Serviço | URL |
-|---|---|
-| API | http://localhost:8080 |
-| Swagger | http://localhost:8080/swagger |
-| RabbitMQ UI | http://localhost:15672 |
-| Grafana | http://localhost:3000 |
-| Prometheus | http://localhost:9090 |
+Adds Prometheus (`http://localhost:9090`) and Grafana (`http://localhost:3001`).
 
+### Run (local — without Docker)
 
-dotnet build
-dotnet run
+Requires PostgreSQL, Redis, and RabbitMQ running locally (or via `docker compose -f docker-compose.dev.yml up -d`).
+
+```bash
+# Backend
+cd backend/src
+dotnet restore && dotnet run --urls http://localhost:5049
+
+# Frontend (another terminal)
+cd frontend/apps/next-shell
+npm install
+npm run dev          # builds Blazor WASM then starts Next.js
 ```
-
-The API will be available at **http://localhost:5049**.
-
-Swagger UI: **http://localhost:5049/swagger**
-
-### Quick Smoke Test
 
 ```bash
 # Health check
