@@ -24,7 +24,7 @@ public class AnalyticsModule : IEndpointModule
         var group = endpoints
             .MapGroup("/api/analytics/issues")
             .WithTags("Analytics - Issues")
-            .RequireAuthorization();
+            .RequireAuthorization(Policies.CanViewAnalytics);
 
         group.MapGet("/summary", GetIssueSummary).WithName("GetIssueSummary");
         group.MapGet("/trends", GetIssueTrends).WithName("GetIssueTrends");
@@ -68,7 +68,7 @@ public class AnalyticsModule : IEndpointModule
         var group = endpoints
             .MapGroup("/api/analytics/users")
             .WithTags("Analytics - Users")
-            .RequireAuthorization();
+            .RequireAuthorization(Policies.CanViewAnalytics);
 
         group.MapGet("/workload", GetAllUsersWorkload).WithName("GetAllUsersWorkload");
         group.MapGet("/workload/{userId:guid}", GetUserWorkload).WithName("GetUserWorkload");
@@ -97,7 +97,7 @@ public class AnalyticsModule : IEndpointModule
         var group = endpoints
             .MapGroup("/api/analytics")
             .WithTags("Analytics - Dashboard")
-            .RequireAuthorization();
+            .RequireAuthorization(Policies.CanViewAnalytics);
 
         group.MapGet("/dashboard", GetDashboard).WithName("GetDashboard");
         group.MapGet("/export", ExportData).WithName("ExportDataGet");
@@ -133,7 +133,7 @@ public class AnalyticsModule : IEndpointModule
         var group = endpoints
             .MapGroup("/api/inventory/analytics")
             .WithTags("Analytics - Inventory")
-            .RequireAuthorization();
+            .RequireAuthorization(Policies.CanViewAnalytics);
 
         group.MapGet("/value", GetInventoryValue).WithName("GetInventoryValue");
         group.MapGet("/summary", GetInventorySummary).WithName("GetInventorySummary");

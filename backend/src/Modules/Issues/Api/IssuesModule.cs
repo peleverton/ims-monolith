@@ -18,7 +18,7 @@ public class IssuesModule : IEndpointModule
         var group = endpoints
             .MapGroup("/api/issues")
             .WithTags("Issues")
-            .RequireAuthorization();
+            .RequireAuthorization(Policies.CanCreateIssue);
 
         group.MapGet("/", GetAll).WithName("GetAllIssues");
         group.MapGet("/{id:guid}", GetById).WithName("GetIssueById");
@@ -32,7 +32,9 @@ public class IssuesModule : IEndpointModule
         group.MapPatch("/{id:guid}/assign", Assign).WithName("AssignIssue");
         group.MapPost("/{id:guid}/comments", AddComment).WithName("AddComment");
         group.MapPost("/{id:guid}/tags", AddTag).WithName("AddTag");
-        group.MapDelete("/{id:guid}", Delete).WithName("DeleteIssue");
+        // Delete requires Manager or Admin (US-057)
+        group.MapDelete("/{id:guid}", Delete).WithName("DeleteIssue")
+             .RequireAuthorization(Policies.CanManageIssues);
 
         return endpoints;
     }

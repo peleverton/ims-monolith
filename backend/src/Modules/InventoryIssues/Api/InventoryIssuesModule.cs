@@ -15,7 +15,7 @@ public class InventoryIssuesModule : IEndpointModule
         var group = endpoints
             .MapGroup("/api/inventory-issues")
             .WithTags("Inventory Issues")
-            .RequireAuthorization();
+            .RequireAuthorization(Policies.CanCreateIssue);
 
         // List / search
         group.MapGet("/", GetAll).WithName("GetInventoryIssues");
@@ -27,7 +27,9 @@ public class InventoryIssuesModule : IEndpointModule
         // CRUD
         group.MapPost("/", Create).WithName("CreateInventoryIssue");
         group.MapPut("/{id:guid}", Update).WithName("UpdateInventoryIssue");
-        group.MapDelete("/{id:guid}", Delete).WithName("DeleteInventoryIssue");
+        // Delete: Admin or Manager only (US-057)
+        group.MapDelete("/{id:guid}", Delete).WithName("DeleteInventoryIssue")
+             .RequireAuthorization(Policies.CanManageIssues);
 
         // Lifecycle
         group.MapPatch("/{id:guid}/assign", Assign).WithName("AssignInventoryIssue");

@@ -18,7 +18,7 @@ public class UserAdminModule : IEndpointModule
         var group = endpoints
             .MapGroup("/api/admin/users")
             .WithTags("Admin - Users")
-            .RequireAuthorization("AdminOnly");
+            .RequireAuthorization(Policies.CanManageUsers);
 
         group.MapGet("/", GetUsers).WithName("AdminGetUsers");
         group.MapGet("/{id:guid}", GetUserById).WithName("AdminGetUserById");

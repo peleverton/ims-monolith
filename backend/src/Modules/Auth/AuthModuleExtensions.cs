@@ -1,5 +1,6 @@
 using IMS.Modular.Modules.Auth.Application.Services;
 using IMS.Modular.Modules.Auth.Infrastructure;
+using IMS.Modular.Shared.Abstractions;
 using IMS.Modular.Shared.Database;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -60,8 +61,35 @@ public static class AuthModuleExtensions
 
         services.AddAuthorization(options =>
         {
+            // Legacy policy — kept for backward compatibility
             options.AddPolicy("AdminOnly", policy =>
                 policy.RequireRole("Admin"));
+
+            // ── US-057: Granular RBAC policies ────────────────────────────────
+
+            // User management: Admin only
+            options.AddPolicy(Policies.CanManageUsers, policy =>
+                policy.RequireRole("Admin"));
+
+            // Issues: any authenticated user can create/view
+            options.AddPolicy(Policies.CanCreateIssue, policy =>
+                policy.RequireAuthenticatedUser());
+
+            // Issues management (delete, bulk): Admin or Manager
+            options.AddPolicy(Policies.CanManageIssues, policy =>
+                policy.RequireRole("Admin", "Manager"));
+
+            // Inventory read: any authenticated user
+            options.AddPolicy(Policies.CanViewInventory, policy =>
+                policy.RequireAuthenticatedUser());
+
+            // Inventory write: Admin or Manager
+            options.AddPolicy(Policies.CanManageInventory, policy =>
+                policy.RequireRole("Admin", "Manager"));
+
+            // Analytics: Admin or Manager
+            options.AddPolicy(Policies.CanViewAnalytics, policy =>
+                policy.RequireRole("Admin", "Manager"));
         });
 
         return services;
