@@ -39,18 +39,16 @@ export function BlazorHost({ mountDelay = 100 }: BlazorHostProps) {
       return;
     }
 
-    // Probe before loading any Blazor script — avoids the uncaught promise
-    // error from blazor.webassembly.js that freezes input event handlers.
-    fetch('/_blazor/_framework/blazor.webassembly.js', { method: 'HEAD' })
+    // Probe using the rewrite path (/_framework/*) — if rewrite is working the
+    // file will be served from public/_blazor/_framework/.
+    fetch('/_framework/blazor.webassembly.js', { method: 'HEAD' })
       .then((r) => setBlazorAvailable(r.ok))
       .catch(() => setBlazorAvailable(false));
   }, []);
 
-  // Don't render Blazor scripts at all when the framework files are absent.
   if (blazorAvailable === false) return null;
-  if (blazorAvailable === null) return null; // still probing
+  if (blazorAvailable === null) return null;
 
-  // If already started, no need to inject scripts again.
   if ((window as any).__blazorStarted) return null;
 
   return (
@@ -59,33 +57,31 @@ export function BlazorHost({ mountDelay = 100 }: BlazorHostProps) {
         rel="stylesheet"
         href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap"
       />
-      <link rel="stylesheet" href="/_blazor/_content/MudBlazor/MudBlazor.min.css" />
+      {/* Use /_content/ rewrite path so MudBlazor CSS sub-resources resolve correctly */}
+      <link rel="stylesheet" href="/_content/MudBlazor/MudBlazor.min.css" />
 
+      {/*
+        Load via /_framework/ (rewritten by next.config to /_blazor/_framework/).
+        This ensures import.meta.url = /_framework/blazor.webassembly.js so all
+        internal dynamic imports (dotnet.js, dotnet.native.*.js, etc.) resolve to
+        /_framework/* — which next.config already rewrites to /_blazor/_framework/*.
+        The tempBase trick does NOT work for ES module import() resolution.
+      */}
       <Script
-        src="/_blazor/_framework/blazor.webassembly.js"
+        src="/_framework/blazor.webassembly.js"
         strategy="lazyOnload"
         data-no-auto-start="true"
         onLoad={() => {
           setTimeout(async () => {
             if ((window as any).__blazorStarted) return;
             (window as any).__blazorStarted = true;
-            window.Blazor?.start({
-              loadBootResource: (
-                _type: string,
-                filename: string,
-                defaultUri: string,
-                _integrity: string
-              ) => {
-                // Rewrite relative _framework/* URLs to use the correct /_blazor/ prefix
-                if (defaultUri.includes('_framework/')) {
-                  return `/_blazor/_framework/${filename}`;
-                }
-                return defaultUri;
-              },
-            }).catch((err: unknown) => {
+
+            try {
+              await window.Blazor?.start({});
+            } catch (err: unknown) {
               console.warn('[BlazorHost] Blazor start failed:', err);
               (window as any).__blazorStarted = false;
-            });
+            }
           }, mountDelay);
         }}
         onError={() => {
@@ -94,7 +90,7 @@ export function BlazorHost({ mountDelay = 100 }: BlazorHostProps) {
       />
 
       <Script
-        src="/_blazor/_content/MudBlazor/MudBlazor.min.js"
+        src="/_content/MudBlazor/MudBlazor.min.js"
         strategy="lazyOnload"
       />
     </>
