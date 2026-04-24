@@ -1,445 +1,618 @@
 # 🧭 Plano de Evolução — IMS Monolith
 
-> **Autor:** Morpheus (Lead Architect)  
-> **Data:** Abril 2026  
-> **Versão atual:** 1.0 — 49 US entregues  
-> **Status geral:** ✅ MVP completo, pronto para evolução
+> **Autor:** Morpheus (Lead Architect)
+> **Última revisão:** Abril 2026
+> **Versão atual:** 2.0 — 59 US entregues
+> **Status geral:** ✅ Sistema estabilizado, testado e com segurança endurecida — pronto para crescimento de produto
 
 ---
 
 ## Sumário Executivo
 
-O IMS Monolith atingiu maturidade de MVP com 49 User Stories entregues, cobrindo backend robusto (.NET 9 Modular Monolith), frontend moderno (Next.js 15 + Blazor WASM), infraestrutura completa (PostgreSQL, Redis, RabbitMQ, SignalR, OpenTelemetry) e CI/CD automatizado.
+O IMS Monolith completou duas fases de evolução com sucesso. As 59 User Stories entregues cobrem:
 
-A análise atual aponta **5 eixos de evolução prioritários**, ordenados por impacto e risco:
+- **Backend** — 5 módulos completos (Auth, Issues, Inventory, InventoryIssues, Analytics), 130+ endpoints, CQRS, Outbox, RabbitMQ, OpenTelemetry, refresh token rotativo, RBAC granular
+- **Frontend** — Next.js 15 BFF, Blazor WASM integrado via Custom Elements, i18n, dark mode, SignalR, export de analytics
+- **Testes** — 62 testes unitários .NET (100% passando), 18 testes de integração, 43 testes unitários React, suite E2E Playwright com cobertura de Blazor
+- **Segurança** — CORS por ambiente, refresh token rotativo com revogação, RBAC policies por módulo
+- **Observabilidade** — OpenTelemetry, Prometheus, Grafana, Jaeger, Serilog estruturado
 
-| Prioridade | Eixo | Impacto | Esforço |
-|---|---|---|---|
-| 🔴 Alta | Qualidade — Testes | Alto | Médio |
-| 🔴 Alta | Segurança — Hardening | Alto | Médio |
-| 🟡 Média | Frontend — UX e completude | Alto | Alto |
-| 🟡 Média | Backend — Módulos faltantes | Médio | Alto |
-| 🟢 Baixa | Infraestrutura — Escala e extração | Alto | Muito Alto |
+### Estado dos débitos técnicos originais
+
+| # | Débito | Status |
+|---|---|---|
+| D-01 | Testes com build quebrado — ILogger não injetado | ✅ Resolvido (US-050) |
+| D-02 | Sem testes para Analytics, Auth, InventoryIssues | ✅ Resolvido (US-051/052/053) |
+| D-03 | Sem UserManagement module | 🔄 Em planejamento (US-064) |
+| D-04 | README desatualizado | ✅ Resolvido |
+| D-05 | E2E sem cobertura de analytics/Blazor | ✅ Resolvido (US-059) |
+| D-06 | Sem testes de integração para Issues, Analytics | ✅ Resolvido (US-054) |
+| D-07 | Frontend sem testes unitários | ✅ Resolvido (US-058) |
+| D-08 | UnitTest1.cs placeholder | ✅ Removido |
+| D-09 | Refresh token sem rotação | ✅ Resolvido (US-055) |
+| D-10 | CORS aberto em produção | ✅ Resolvido (US-056) |
 
 ---
 
 ## 1. Diagnóstico do Estado Atual
 
-### 1.1 Pontos Fortes
+### 1.1 Cobertura de testes (pós US-058/059)
 
-- ✅ **Arquitetura sólida** — Modular Monolith com CQRS, Clean Architecture, Result pattern. Fácil de raciocinar e evoluir
-- ✅ **Backend feature-completo** — 5 módulos, 130+ endpoints, 25+ domain events, Outbox, Messaging, Observabilidade
-- ✅ **Frontend funcional** — Next.js BFF, autenticação completa, Blazor WASM integrado, i18n, dark mode
-- ✅ **Pipeline CI/CD** — GitHub Actions, build, test, Docker, GHCR
-- ✅ **Observabilidade** — OpenTelemetry, Prometheus, Grafana, Serilog, Jaeger
-- ✅ **Eventos e mensageria** — RabbitMQ, Outbox, consumers para LowStock e IssueCreated
+```
+Backend (.NET 9)
+├── Unit tests:        62 testes — 5 módulos cobertos — 100% passando
+├── Integration tests: 18 testes — 3 módulos cobertos (Inventory, Issues, Analytics)
+└── Cobertura estimada: ~65% handlers, ~80% domain entities
 
-### 1.2 Débitos Técnicos Identificados
+Frontend (Next.js 15)
+├── Unit tests (Vitest+RTL): 43 testes — Button, ExportButton, api-fetch, utils, notifications
+├── E2E (Playwright):         auth, issues, inventory, analytics + Blazor WASM
+└── Cobertura estimada: ~40% componentes críticos
+```
+
+### 1.2 Débitos técnicos identificados (nova rodada)
 
 #### 🔴 Críticos
 
 | # | Débito | Local | Impacto |
 |---|---|---|---|
-| D-01 | **Testes com build quebrado** — `ILogger` não injetado nos handlers; `InventoryCommandHandlerTests` e `IssueCommandHandlerTests` não compilam | `backend/tests/Modules/` | CI falha silenciosamente |
-| D-02 | **Sem testes para Analytics, Auth, InventoryIssues** — 0 testes unitários para 3 módulos inteiros | `backend/tests/` | Regressão invisível |
-| D-03 | **Sem UserManagement module** — US-019 está listada como Done, mas o módulo não existe em `backend/src/Modules/` | `backend/src/Modules/` | Funcionalidades de admin sem implementação real |
+| D-11 | **UserManagement sem módulo dedicado** — operações de user admin acopladas ao módulo Auth | `Auth/Api/UserAdminModule.cs` | Violação de separação de responsabilidades |
+| D-12 | **Sem migrations versionadas** — usa `EnsureCreated` (destrutivo em produção) | `*ModuleExtensions.cs` | Impossível fazer zero-downtime deploy em produção real |
+| D-13 | **Sem paginação cursor-based** — toda paginação é offset (lenta em tabelas grandes) | `*ReadRepositories.cs` | Degradação de performance com volume de dados |
 
 #### 🟡 Importantes
 
 | # | Débito | Local | Impacto |
 |---|---|---|---|
-| D-04 | **Roadmap desatualizado no README** — ainda menciona SQLite, fases antigas como "Planned" quando já estão entregues | `README.md` | Confusão para novos contribuidores |
-| D-05 | **E2E sem cobertura de analytics/Blazor** — `dashboard.spec.ts` cobre apenas skeleton, não valida dados reais | `frontend/apps/next-shell/e2e/` | Regressão Blazor sem detecção |
-| D-06 | **Sem testes de integração para Issues, Analytics** — apenas Inventory possui integration tests | `backend/tests/Integration/` | Cobertura assimétrica |
-| D-07 | **Frontend sem testes unitários** — nenhum arquivo `*.test.tsx` no Next.js shell | `frontend/apps/next-shell/` | Componentes críticos sem cobertura |
+| D-14 | **Sem rate limiting no BFF** — Next.js proxy sem throttling | `app/api/proxy/` | Vetor de abuso / custo de API |
+| D-15 | **Sem health check do frontend** — Next.js não expõe `/health` | `next.config.ts` | Monitoramento incompleto |
+| D-16 | **Sem testes de contract (Pact)** — nenhuma garantia de que BFF e API .NET são compatíveis | `e2e/` | Quebra silenciosa de contrato |
+| D-17 | **Frontend sem React Query** — todos os fetches são bare `fetch()` sem cache/retry/stale | `lib/api-fetch.ts` | Re-renders desnecessários, sem cache client-side |
+| D-18 | **Sem compressão Brotli no Blazor WASM** — `.wasm` ~8MB não comprimido no nginx/Kestrel | `Dockerfile.frontend` | TTI alto em conexões lentas |
 
 #### 🟢 Menores
 
 | # | Débito | Local | Impacto |
 |---|---|---|---|
-| D-08 | **`UnitTest1.cs` placeholder** ainda no projeto | `backend/tests/` | Ruído no relatório |
-| D-09 | **Auth module sem refresh token rotativo** — refresh token é válido indefinidamente após emissão | `backend/src/Modules/Auth/` | Vetor de segurança |
-| D-10 | **CORS aberto** (`AllowAnyOrigin`) em produção | `backend/src/Program.cs` | Segurança |
+| D-19 | **Auth: sem `POST /api/auth/logout` no BFF** — BFF não repassa logout para o backend | `app/api/auth/logout/` | Refresh token não é revogado no servidor ao fazer logout |
+| D-20 | **Sem OpenAPI client gerado** — frontend chama endpoints manualmente sem type safety | `lib/api/` | Risco de discrepância de tipos |
+| D-21 | **Issues sem campo `resolvedAt` na query read** — DTO não retorna `ResolvedAt` | `IssuesReadRepository.cs` | Relatórios de SLA incompletos |
 
 ---
 
-## 2. Plano de Evolução por Fase
+## 2. Eixos de Evolução Futura
 
-### Fase A — Estabilização (Sprints 1–2) 🔴
+| Prioridade | Eixo | Impacto | Esforço | Sprint alvo |
+|---|---|---|---|---|
+| 🔴 Alta | Produto — Home Dashboard + Kanban | Alto | Médio | Sprint 7 |
+| 🔴 Alta | Backend — UserManagement Module | Alto | Médio | Sprint 7 |
+| 🔴 Alta | Infra — Migrations versionadas | Alto | Alto | Sprint 8 |
+| 🟡 Média | Backend — Notifications Module | Médio | Médio | Sprint 8 |
+| 🟡 Média | Backend — Background Jobs | Médio | Baixo | Sprint 8 |
+| 🟡 Média | Frontend — React Query + cache client | Médio | Médio | Sprint 9 |
+| 🟡 Média | Backend — Webhooks outbound | Médio | Alto | Sprint 9 |
+| 🟢 Baixa | Backend — Full-text search | Alto | Alto | Sprint 10 |
+| 🟢 Baixa | Infra — Feature Flags | Baixo | Baixo | Sprint 10 |
+| 🟢 Baixa | Infra — Background jobs scheduler | Médio | Médio | Sprint 10 |
+| 🟢 Baixa | Infra — Multi-tenancy | Alto | Muito Alto | Sprint 12+ |
+| 🟢 Baixa | Infra — Extração de microserviço (PoC) | Alto | Muito Alto | Sprint 12+ |
 
-> Objetivo: zerar débitos críticos e restabelecer confiança na suite de testes.
+---
 
-#### US-050: Corrigir testes quebrados — injetar ILogger nos handlers
+## 3. Plano Detalhado por Sprint
 
-**Problema:** Os construtores dos command handlers foram evoluídos para incluir `ILogger<T>`,
-mas os testes não foram atualizados. O projeto de testes não compila.
+### Sprint 7 — Produto e Módulos Faltantes 🔴
 
-**Solução:**
-```csharp
-// Nos testes — injetar logger mock
-var logger = Mock.Of<ILogger<CreateIssueCommandHandler>>();
-var handler = new CreateIssueCommandHandler(context, cache, logger);
+#### US-060: Home Dashboard — Visão consolidada
+
+A `app/page.tsx` atual é um redirect para `/issues`. Criar uma home real com Server Components:
+
+```
+/app/page.tsx → Server Component
+├── 4 KPI cards: Total Issues, Open Issues, Total Products, Low Stock
+├── Últimas 5 issues modificadas (atividade recente)
+├── Últimas 3 alertas de estoque
+└── Links rápidos: Nova Issue, Ajustar Estoque, Ver Analytics
 ```
 
-**Arquivos:** `IssueCommandHandlerTests.cs`, `InventoryCommandHandlerTests.cs`  
-**Esforço:** 2h
-
----
-
-#### US-051: Testes unitários — Módulo Analytics
-
-Cobrir handlers e repositório de Analytics:
-- `GetIssueSummaryQueryHandler`
-- `GetDashboardQueryHandler`
-- `GetIssueStatsByStatusQueryHandler`
-- `GetIssueStatsByPriorityQueryHandler`
-- Mock de `IAnalyticsReadRepository` com Moq
-
-**Esforço:** 1 dia
-
----
-
-#### US-052: Testes unitários — Módulo Auth
-
-Cobrir:
-- `RegisterCommandHandler` — happy path + email duplicado
-- `LoginCommandHandler` — happy path + senha errada
-- `JwtTokenService.GenerateToken()` — valida claims
-- `AuthValidators` — email, senha, username
-
-**Esforço:** 1 dia
-
----
-
-#### US-053: Testes unitários — Módulo InventoryIssues
-
-Cobrir:
-- `CreateInventoryIssueCommandHandler`
-- `ResolveInventoryIssueCommandHandler`
-- `LowStockConsumerService` — simular mensagem RabbitMQ e verificar criação de issue
-- `InventoryIssueValidators`
-
-**Esforço:** 1 dia
-
----
-
-#### US-054: Testes de integração — Issues e Analytics
-
-Expandir `IntegrationWebAppFactory` para cobrir:
-- Criação e atualização de Issue via API
-- Fluxo completo: Create → InProgress → Resolved
-- Endpoints de analytics retornam 200 com dados válidos após seed
+**Implementação:**
+- `GET /api/issues?pageSize=5&sort=updatedAt` + `GET /api/analytics/issues/summary`
+- `GET /api/inventory/analytics/summary` para contagens de estoque
+- Zero loading spinner inicial (tudo via Server Components, dados frescos no request)
+- Responsivo, dark mode compatível
 
 **Esforço:** 2 dias
 
 ---
 
-### Fase B — Segurança e Hardening (Sprint 3) 🔴
+#### US-061: Painel de histórico de notificações
 
-> Objetivo: fechar vetores de segurança antes de qualquer exposição pública.
+As notificações SignalR existem como toasts efêmeros. Persistir na sessão:
 
-#### US-055: Refresh Token rotativo + revogação
-
-**Problema:** O refresh token atual não é rotativo — pode ser reutilizado indefinidamente mesmo após logout.
-
-**Solução:**
-- Adicionar tabela `RefreshTokens` (hash, userId, expiresAt, revokedAt)
-- Ao usar um refresh token, revogar o atual e emitir um novo
-- `POST /api/auth/logout` revoga o refresh token
-
-**Esforço:** 3 dias
-
----
-
-#### US-056: Restringir CORS para origens conhecidas
-
-**Problema:** `AllowAnyOrigin()` em produção permite CSRF e acesso de origens maliciosas.
-
-**Solução:**
-```json
-// appsettings.Production.json
-"Cors": {
-  "AllowedOrigins": ["https://ims.yourdomain.com"]
-}
+```
+Sidebar → ícone 🔔 com badge (unreadCount)
+         → clica → NotificationPanel (slide-over)
+                   ├── Lista de notificações com timestamp
+                   ├── Marcar como lida (individual)
+                   ├── Marcar todas como lidas
+                   └── Limpar histórico
 ```
 
-**Esforço:** 2h
-
----
-
-#### US-057: Autorização granular por módulo (RBAC policies)
-
-Atualmente `RequireAuthorization()` é genérico. Adicionar policies por recurso:
-- `Policy.CanManageUsers` → role Admin
-- `Policy.CanViewAnalytics` → roles Admin, Manager
-- `Policy.CanCreateIssue` → qualquer usuário autenticado
-
-**Esforço:** 2 dias
-
----
-
-### Fase C — Frontend — Completude e UX (Sprints 4–6) 🟡
-
-> Objetivo: tornar o frontend production-ready com cobertura de testes e UX polida.
-
-#### US-058: Testes unitários React — Componentes críticos
-
-Instalar Vitest + React Testing Library. Cobrir:
-- `<AuthForm />` — validação, submit, erro
-- `<IssueCard />` — render de dados
-- `<InventoryTable />` — paginação, filtros
-- `hooks/useAuth.ts` — token refresh, logout
-- `lib/api-fetch.ts` — mock fetch, error handling
-
-**Esforço:** 3 dias
-
----
-
-#### US-059: E2E Playwright — Analytics e Blazor
-
-Expandir `dashboard.spec.ts` para validar:
-- Blazor WASM carrega completamente (aguardar `analytics-dashboard` ter conteúdo)
-- KPI cards exibem valores numéricos reais (não zero)
-- Gráfico de linha renderiza com dados dos últimos 30 dias
-- Atualização via botão Refresh funciona
-
-**Esforço:** 2 dias
-
----
-
-#### US-060: Dashboard principal (Home) — Visão consolidada
-
-A `app/page.tsx` atual é apenas um redirect. Criar uma home com:
-- 4 KPI cards (total issues, open, inventory itens, low stock)
-- Atividade recente (últimas 5 issues modificadas)
-- Links rápidos para as seções principais
-- Dados via Server Components (sem loading spinner inicial)
-
-**Esforço:** 3 dias
-
----
-
-#### US-061: Notificações em tempo real — Painel de histórico
-
-Atualmente as notificações SignalR aparecem como toasts mas não são persistidas.
-Adicionar:
-- Painel lateral "Notificações" com histórico da sessão
-- Badge com contador de não lidas no ícone da sidebar
-- Marcar como lida individualmente ou limpar todas
-
-**Esforço:** 2 dias
+**Status:** Infraestrutura já existe em `NotificationProvider` — falta apenas o painel visual.
+**Arquivos:** `notification-panel.tsx` (já existe esqueleto), `notification-bell.tsx`, `sidebar.tsx`
+**Esforço:** 1 dia
 
 ---
 
 #### US-062: Issues — Kanban Board view
 
-Alternativa à lista tabular de issues, mais visual:
-- 4 colunas: Open / InProgress / Testing / Resolved
-- Drag-and-drop para mover entre colunas (chama `PUT /api/issues/{id}/status`)
-- Filtro por assignee e prioridade
+Alternativa visual à lista tabular:
 
-**Esforço:** 4 dias
+```
+/issues?view=kanban
+├── 4 colunas: Open │ InProgress │ Testing │ Resolved
+├── Drag-and-drop → PATCH /api/issues/{id}/status
+├── Filtro por priority e assignee
+└── Toggle List/Kanban na toolbar
+```
 
----
-
-#### US-063: Relatórios — Export de analytics no frontend
-
-Expor o endpoint `GET /api/analytics/export` na UI:
-- Botão "Exportar" na página de analytics
-- Escolha de formato: JSON / CSV
-- Download direto via browser
-
-**Esforço:** 1 dia
+**Decisão técnica:** usar `@dnd-kit/core` (leve, acessível, sem jQuery) em vez de `react-beautiful-dnd` (deprecated).
+**Esforço:** 3 dias
 
 ---
 
-### Fase D — Backend — Módulos e Features Faltantes (Sprints 7–9) 🟡
+#### US-064: UserManagement Module — Módulo dedicado
 
-#### US-064: UserManagement Module — CRUD completo
+O módulo `UserAdminModule.cs` está acoplado ao módulo Auth. Extrair para módulo independente:
 
-O módulo referenciado como "Done" (US-019) não existe como módulo independente em `backend/src/Modules/`.
-As operações de user admin estão embebidas em `Auth/Api/UserAdminModule.cs`.
+```
+backend/src/Modules/UserManagement/
+├── Domain/
+│   ├── Entities/UserProfile.cs     — dados de perfil (separar de credenciais)
+│   └── Events/UserEvents.cs        — UserActivated, UserDeactivated, UserRoleChanged
+├── Application/
+│   ├── Commands/                    — UpdateProfile, ActivateUser, ChangeRole
+│   └── Handlers/UserCommandHandlers.cs
+├── Infrastructure/
+│   └── UserManagementDbContext.cs  — schema compartilhado via view ou tabela separada
+└── Api/UserManagementModule.cs     — migrar endpoints de /api/admin/users
+```
 
-Criar módulo dedicado `UserManagement/` com:
-- `UserManagementDbContext` separado do Auth
-- Commands: `UpdateUser`, `ActivateUser`, `DeactivateUser`, `ChangePassword`, `AssignRole`, `RemoveRole`
-- Queries: `GetUsers`, `GetUserById`, `GetUsersByRole`, `GetActiveUsers`
-- Domain events: `UserActivated`, `UserDeactivated`, `UserRoleAssigned`
-- Migrar endpoints de `/api/users/*` de `UserAdminModule` para o novo módulo
-
-**Esforço:** 5 dias
-
----
-
-#### US-065: Notifications Module — Email com templates
-
-Atualmente não há módulo de Notifications. O SignalR Hub existe em `Shared`.
-Criar `Notifications/` com:
-- `EmailService` com templates HTML (Razor templates ou HBS)
-- Templates: `WelcomeEmail`, `IssueAssigned`, `LowStockAlert`, `PasswordChanged`
-- Consumer de eventos de domínio → envia email em background
-- `NotificationsDbContext` para persistir histórico de notificações enviadas
-
-**Esforço:** 4 dias
-
----
-
-#### US-066: Feature Flags — Toggle por ambiente
-
-Adicionar suporte a feature flags simples para controlar rollout:
-- Integração com `Microsoft.FeatureManagement`
-- Flags em `appsettings.json` e override via variáveis de ambiente
-- Exemplos: `Analytics.EnableExport`, `Inventory.EnableExpiryAlerts`
-
-**Esforço:** 2 dias
-
----
-
-#### US-067: Webhooks outbound — Notificações para sistemas externos
-
-Permitir que clientes se cadastrem para receber eventos via HTTP webhook:
-- `POST /api/webhooks` — registrar endpoint + secret
-- `GET /api/webhooks` — listar registros
-- Entrega assíncrona com retry (3x, backoff exponencial)
-- Assinatura HMAC-SHA256 no header `X-IMS-Signature`
-- Eventos suportados: `issue.created`, `issue.resolved`, `stock.low`, `product.discontinued`
-
-**Esforço:** 5 dias
-
----
-
-#### US-068: Search full-text — Elasticsearch / Meilisearch
-
-Busca textual avançada cross-módulo:
-- Indexar Issues (título, descrição, tags), Produtos (nome, SKU, descrição), InventoryIssues
-- `GET /api/search?q=termo` retorna resultados ranqueados de todos os módulos
-- Sync via domain events (indexação assíncrona)
-
-**Esforço:** 1 semana
-
----
-
-### Fase E — Infraestrutura e Escala (Sprints 10–12) 🟢
-
-> Objetivo: preparar para crescimento e eventual extração de serviços.
-
-#### US-069: Multi-tenancy — Isolamento por organização
-
-Adicionar suporte a multi-tenancy via `TenantId`:
-- Middleware `TenantResolutionMiddleware` (subdomínio ou header)
-- `ITenantContext` injetado nos DbContexts (filtro global)
-- Isolamento de dados no nível de query
-
-**Esforço:** 1 semana
-
----
-
-#### US-070: Background Jobs — Hangfire ou Quartz.NET
-
-Jobs recorrentes que hoje não existem:
-- `ExpiryCheckJob` — diário: varrer produtos com `ExpiryDate` nos próximos 30 dias
-- `OverdueIssuesJob` — a cada 6h: marcar issues com `DueDate` passada
-- `AnalyticsSnapshotJob` — semanal: snapshot de KPIs históricos para trends de longo prazo
-- Dashboard de jobs via `/hangfire` (autenticado, Admin only)
+**Estratégia de migração:**
+1. Criar novo módulo com os mesmos endpoints sob `/api/users` (novo path)
+2. Manter `/api/admin/users` funcionando (deprecated) por 1 sprint
+3. Remover `UserAdminModule.cs` do módulo Auth
 
 **Esforço:** 3 dias
 
 ---
 
-#### US-071: Extração de módulo — Issues como microserviço (PoC)
+### Sprint 8 — Infraestrutura Crítica e Notificações 🔴
 
-Demonstrar que a arquitetura modular permite extração sem reescrita:
-- Extrair `Issues` para projeto separado `IMS.Issues.Service`
-- Comunicação via RabbitMQ (eventos já existem)
-- API gateway simples (YARP reverse proxy) roteando `/api/issues/*`
-- Manter backward compatibility 100%
+#### US-065: Migrations versionadas com EF Core
 
-**Esforço:** 1 semana (PoC)
+O uso de `EnsureCreated` é destrutivo em produção (recria o schema). Substituir por migrations:
 
----
+```bash
+dotnet ef migrations add InitialSchema --project backend/src --startup-project backend/src
+```
 
-#### US-072: CDN e otimização de assets Blazor WASM
+**Por módulo:**
+- `AuthDbContext` → `Migrations/Auth/`
+- `IssuesDbContext` → `Migrations/Issues/`
+- `InventoryDbContext` → `Migrations/Inventory/`
+- `InventoryIssuesDbContext` → `Migrations/InventoryIssues/`
 
-O `.wasm` do Blazor (~8MB) é carregado a cada deploy sem cache persistente:
-- Configurar cache headers longos para assets Blazor (`Cache-Control: immutable`)
-- Compressão Brotli para `.wasm` e `.dll`
-- Lazy loading de módulos Blazor não usados na rota inicial
+**Estratégia:**
+- `dotnet ef database update` no startup (não `EnsureCreated`)
+- Manter `EnsureCreated` apenas para SQLite em testes de integração
+- CI verifica que migrations estão atualizadas (`dotnet ef migrations has-pending-model-changes`)
 
 **Esforço:** 2 dias
 
 ---
 
-## 3. Matriz de Priorização
+#### US-066: Notifications Module — Email e histórico persistido
+
+```
+backend/src/Modules/Notifications/
+├── Domain/
+│   ├── Entities/Notification.cs    — id, userId, type, title, body, sentAt, readAt
+│   └── Templates/                  — Razor/HBS templates
+├── Application/
+│   ├── Commands/SendNotificationCommand.cs
+│   └── Consumers/                  — IssueAssignedConsumer, LowStockEmailConsumer
+└── Infrastructure/
+    ├── NotificationsDbContext.cs
+    ├── EmailService.cs              — SmtpClient ou SendGrid
+    └── NotificationReadRepository.cs
+```
+
+**Endpoints novos:**
+```
+GET  /api/notifications          — histórico do usuário autenticado
+POST /api/notifications/{id}/read — marcar como lida
+```
+
+**Esforço:** 3 dias
+
+---
+
+#### US-067: Background Jobs com Hangfire
+
+Jobs recorrentes que hoje não existem:
+
+```csharp
+// Registrar jobs no startup
+RecurringJob.AddOrUpdate<ExpiryCheckJob>(
+    "expiry-check", job => job.ExecuteAsync(), Cron.Daily);
+
+RecurringJob.AddOrUpdate<OverdueIssuesJob>(
+    "overdue-issues", job => job.ExecuteAsync(), "0 */6 * * *");
+
+RecurringJob.AddOrUpdate<AnalyticsSnapshotJob>(
+    "analytics-snapshot", job => job.ExecuteAsync(), Cron.Weekly);
+```
+
+**Jobs:**
+| Job | Trigger | O que faz |
+|---|---|---|
+| `ExpiryCheckJob` | Diário 00:00 | Cria `InventoryIssue` para produtos com expiração nos próximos 30 dias |
+| `OverdueIssuesJob` | A cada 6h | Marca issues com `DueDate < now` e status `Open/InProgress` como Overdue via evento |
+| `AnalyticsSnapshotJob` | Semanal | Salva snapshot de KPIs em tabela `AnalyticsSnapshots` para trends históricos |
+| `TokenCleanupJob` | Noturno | Remove `RefreshTokens` revogados/expirados há mais de 30 dias |
+
+**Dashboard:** `/hangfire` — autenticado, policy `CanManageUsers` (Admin only)
+**Esforço:** 2 dias
+
+---
+
+### Sprint 9 — Frontend Qualidade e Webhooks 🟡
+
+#### US-068: React Query — Cache client-side e UX reativa
+
+Todos os fetches do frontend usam `fetch()` bare sem cache. Migrar para `@tanstack/react-query`:
+
+```tsx
+// Antes
+const data = await apiFetch<IssueSummaryDto>("/api/analytics/issues/summary");
+
+// Depois
+const { data, isLoading, error } = useQuery({
+  queryKey: ["analytics", "issueSummary"],
+  queryFn: () => apiFetch<IssueSummaryDto>("/api/analytics/issues/summary"),
+  staleTime: 30_000,   // fresco por 30s
+  retry: 2,
+});
+```
+
+**Benefícios:**
+- Deduplicação automática de requests simultâneos
+- Cache global — navegar entre páginas não refaz requests
+- `invalidateQueries` após mutations (ex: criar issue → atualizar contadores)
+- Loading/error states uniformes
+
+**Arquivos afetados:** todas as páginas de dashboard, componentes de analytics
+**Esforço:** 2 dias
+
+---
+
+#### US-069: Webhooks outbound
+
+Clientes externos podem receber eventos IMS via HTTP:
+
+```
+POST /api/webhooks          — registrar endpoint + events + secret HMAC
+GET  /api/webhooks          — listar registros do usuário
+DELETE /api/webhooks/{id}   — remover
+```
+
+**Payload assinado:**
+```http
+POST https://cliente.com/webhook
+X-IMS-Signature: sha256=<hmac-sha256-do-body>
+X-IMS-Event: issue.created
+Content-Type: application/json
+
+{ "event": "issue.created", "timestamp": "...", "data": { ... } }
+```
+
+**Entrega:** fila RabbitMQ `webhooks.delivery` → consumer com retry 3x + backoff exponencial
+**Eventos suportados:** `issue.created`, `issue.resolved`, `stock.low`, `user.invited`
+**Esforço:** 4 dias
+
+---
+
+#### US-070: BFF Logout com revogação no backend
+
+Atualmente o BFF apaga cookies de sessão mas não chama `POST /api/auth/logout` no backend. O refresh token permanece ativo no banco até expirar:
+
+```typescript
+// app/api/auth/logout/route.ts
+// Adicionar: chamar backend para revogar o refresh token
+const refreshToken = cookieStore.get("ims_refresh_token")?.value;
+if (refreshToken) {
+  await fetch(`${API_BASE}/api/auth/logout`, {
+    method: "POST",
+    body: JSON.stringify({ refreshToken }),
+    headers: { "Content-Type": "application/json" },
+  });
+}
+```
+
+**Esforço:** 2h — quick win
+
+---
+
+### Sprint 10 — Produto Avançado e Qualidade 🟡
+
+#### US-071: Full-text search cross-módulo
+
+```
+GET /api/search?q=laptop&modules=issues,inventory&page=1&pageSize=20
+```
+
+**Resposta:**
+```json
+{
+  "results": [
+    { "module": "inventory", "type": "product", "id": "...", "title": "Laptop Dell...", "score": 0.95 },
+    { "module": "issues",    "type": "issue",   "id": "...", "title": "Bug no Laptop...", "score": 0.82 }
+  ],
+  "total": 12
+}
+```
+
+**Decisão técnica:** Meilisearch (Rust, simples, self-hosted, excelente DX)
+- Indexação via domain events (async, eventual consistency)
+- Container `meilisearch` no `docker-compose.yml`
+- `SearchModule` dedicado com `ISearchService` e implementação `MeilisearchService`
+
+**Esforço:** 5 dias
+
+---
+
+#### US-072: Compressão Brotli para assets Blazor WASM
+
+O `.wasm` (~8MB) carregado a cada visita sem cache agressivo:
+
+```dockerfile
+# Dockerfile.frontend
+RUN find /app/public/blazor -name "*.wasm" -o -name "*.dll" | \
+    xargs -I{} brotli --best --force {} --output {}.br
+```
+
+```typescript
+// next.config.ts — adicionar headers de cache
+headers: [
+  {
+    source: "/blazor/:path*",
+    headers: [
+      { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+    ],
+  },
+]
+```
+
+**Resultado esperado:** download inicial reduzido de ~8MB → ~2MB (Brotli)
+**Esforço:** 1 dia
+
+---
+
+#### US-073: Testes de contrato (Pact) — BFF ↔ API .NET
+
+Garantir que o BFF Next.js e o backend .NET são compatíveis:
+
+```typescript
+// e2e/contracts/analytics.contract.ts
+const issuesSummaryContract = {
+  state: "issues exist",
+  uponReceiving: "GET /api/analytics/issues/summary",
+  withRequest: { method: "GET", path: "/api/analytics/issues/summary" },
+  willRespondWith: {
+    status: 200,
+    body: like({ total: integer(), open: integer() }),
+  },
+};
+```
+
+**Esforço:** 2 dias
+
+---
+
+### Sprint 11–12 — Feature Flags e Observabilidade Avançada 🟢
+
+#### US-074: Feature Flags com Microsoft.FeatureManagement
+
+```json
+// appsettings.json
+"FeatureManagement": {
+  "Analytics.EnableExport":       true,
+  "Inventory.EnableExpiryAlerts": true,
+  "Issues.EnableKanban":          true,
+  "Webhooks.Enabled":             false
+}
+```
+
+```csharp
+// Uso nos endpoints
+if (!await featureManager.IsEnabledAsync("Webhooks.Enabled"))
+    return Results.NotFound();
+```
+
+**Override por ambiente:** variáveis de ambiente `FeatureManagement__Webhooks__Enabled=true`
+**Esforço:** 1 dia
+
+---
+
+#### US-075: Alertas no Grafana — SLA e anomalias
+
+Configurar alertas automáticos no Grafana (já disponível no stack):
+
+| Alerta | Condição | Canal |
+|---|---|---|
+| `HighErrorRate` | `rate(http_errors[5m]) > 1%` | Slack / Email |
+| `SlowAPI` | `p99 latency > 2s` por 5min | Slack |
+| `LowStockCritical` | `stock_level < min_level * 0.5` | Slack |
+| `IssueOverdueSurge` | Overdue issues aumentaram > 20% em 1h | Email |
+
+**Esforço:** 1 dia
+
+---
+
+### Sprint 12+ — Escala e Arquitetura 🟢
+
+#### US-076: Multi-tenancy — Isolamento por organização
+
+> ⚠️ Alto risco de regressão. Exige cobertura de testes ≥ 85% antes de iniciar.
+
+**Estratégia:** Row-level security via `TenantId` em todas as entidades (não schema-per-tenant)
+
+```csharp
+// Middleware
+app.UseTenantResolution(); // extrai TenantId de subdomain/header
+
+// DbContext — filtro global
+modelBuilder.Entity<Issue>().HasQueryFilter(x => x.TenantId == _tenantContext.TenantId);
+```
+
+**Migração:** script de migration adiciona `TenantId NOT NULL DEFAULT '00000000-...'` + índice
+**Esforço:** 1 semana
+
+---
+
+#### US-077: Extração de Issues como microserviço (PoC)
+
+Demonstrar que o design modular permite extração sem reescrita:
+
+```
+Antes:  ims-monolith → handles /api/issues/*
+Depois: ims-monolith → YARP proxy → ims-issues-service
+                     → outros módulos internos
+```
+
+**Steps:**
+1. Extrair `Issues` para `IMS.Issues.Service` (novo projeto)
+2. Comunicação via RabbitMQ (já existe) — sem chamadas HTTP inter-serviço
+3. YARP (`Microsoft.ReverseProxy`) roteando `/api/issues/*`
+4. Feature flag `Issues.UseExternalService` para rollback imediato
+
+**Esforço:** 1 semana (PoC — não produção)
+
+---
+
+## 4. Backlog Priorizado — Próximas 6 Sprints
+
+```
+Sprint 7  (now):  US-060 Home Dashboard
+                  US-061 Notification Panel
+                  US-062 Kanban Board
+                  US-064 UserManagement Module
+
+Sprint 8:         US-065 Migrations versionadas (crítico para produção)
+                  US-066 Notifications Module (email + histórico)
+                  US-067 Background Jobs (Hangfire)
+                  US-070 BFF Logout → revogação no backend (2h, quick win)
+
+Sprint 9:         US-068 React Query no frontend
+                  US-069 Webhooks outbound
+                  US-071 Full-text search (Meilisearch)
+
+Sprint 10:        US-072 Compressão Brotli Blazor WASM
+                  US-073 Contract tests (Pact)
+                  US-074 Feature Flags
+
+Sprint 11:        US-075 Alertas Grafana
+                  D-19 BFF rate limiting
+                  D-20 OpenAPI client gerado automaticamente
+
+Sprint 12+:       US-076 Multi-tenancy
+                  US-077 Microserviço Issues (PoC)
+```
+
+---
+
+## 5. Métricas de Sucesso Atualizadas
+
+| Fase | Métrica | Estado atual | Meta |
+|---|---|---|---|
+| Testes .NET | % passando | ✅ 100% (80 testes) | Manter ≥ 100% |
+| Testes .NET | Cobertura handlers | ~65% | ≥ 80% |
+| Testes React | Componentes cobertos | ~40% | ≥ 70% |
+| E2E | Pass rate em CI | ✅ Em definição | 100% |
+| Segurança | Refresh token rotativo | ✅ Implementado | — |
+| Segurança | RBAC por módulo | ✅ Implementado | — |
+| Performance | TTI com Blazor WASM | ~4s (cold) | < 2s (com Brotli) |
+| Migrations | Estratégia em produção | ❌ EnsureCreated | EF Migrations |
+| Produto | Home Dashboard | ❌ Redirect | Server Component com KPIs |
+
+---
+
+## 6. Matriz de Priorização (atualizada)
 
 ```
                     IMPACTO
                  baixo │ alto
-                ───────┼──────────
-           alto │  D-08 │ D-01, D-02, D-03
-  ESFORÇO       │  D-10 │ US-055, US-064
-           baixo│  D-09 │ US-056, US-050~054
-                ───────┼──────────
+                ───────┼────────────────────────────
+           alto │      │ US-065 (migrations)
+  ESFORÇO       │      │ US-071 (full-text search)
+                │      │ US-076 (multi-tenancy)
+           baixo│ D-19 │ US-060 (home dashboard)   ← quick wins
+                │ D-20 │ US-070 (BFF logout)
+                │ D-21 │ US-067 (background jobs)
+                ───────┼────────────────────────────
 ```
 
-**Quick wins** (alto impacto, baixo esforço):
-1. US-050 — corrigir compilação dos testes (2h)
-2. US-056 — CORS restrito (2h)
-3. US-063 — Export no frontend (1 dia)
-
-**Investimentos estratégicos** (alto impacto, alto esforço):
-1. US-064 — UserManagement Module
-2. US-055 — Refresh Token rotativo
-3. US-068 — Full-text search
+**Quick wins recomendados para o Sprint 7:**
+1. US-070 — BFF Logout revoga token no backend (2h)
+2. US-060 — Home Dashboard com KPIs reais (2 dias)
+3. US-061 — Notification panel (1 dia — infraestrutura já existe)
 
 ---
 
-## 4. Métricas de Sucesso por Fase
+## 7. Riscos Atualizados
 
-| Fase | Métrica-chave | Meta |
-|---|---|---|
-| A — Estabilização | % tests passando | 100% (de 0% atual no CI) |
-| A — Estabilização | Cobertura de código | ≥ 70% nos módulos cobertos |
-| B — Segurança | Vulnerabilidades OWASP Top 10 | 0 críticas |
-| C — Frontend | Lighthouse score | ≥ 90 (perf + accessibility) |
-| C — Frontend | E2E pass rate | 100% em CI |
-| D — Backend | Endpoints documentados no Swagger | 100% |
-| E — Infra | Tempo de deploy (zero-downtime) | < 3 min |
-
----
-
-## 5. Backlog Priorizado (próximas 6 sprints)
-
-```
-Sprint 1:  US-050 (fix tests) + US-051 (analytics tests) + US-056 (CORS)
-Sprint 2:  US-052 (auth tests) + US-053 (inventory-issues tests) + US-054 (integration tests)
-Sprint 3:  US-055 (refresh token rotativo) + US-057 (RBAC policies)
-Sprint 4:  US-058 (React unit tests) + US-059 (E2E analytics/Blazor)
-Sprint 5:  US-060 (home dashboard) + US-063 (export frontend) + US-061 (notif history)
-Sprint 6:  US-064 (UserManagement module) + US-065 (Notifications module)
-```
-
----
-
-## 6. Riscos
-
-| Risco | Probabilidade | Impacto | Mitigação |
+| Risco | Prob | Impacto | Mitigação |
 |---|---|---|---|
-| Testes permanecem quebrados em CI | Alta | Alto | US-050 deve ser a primeira task |
-| Extração prematura de microserviços sem testes | Média | Alto | Não iniciar Fase E sem cobertura ≥ 70% |
-| Blazor WASM aumenta TTI em dispositivos lentos | Média | Médio | US-072 (cache/compressão) + lazy loading |
-| Multi-tenancy retroativo quebra queries existentes | Alta | Alto | Migrations e filtros globais precisam de testes extensivos antes de habilitar |
+| `EnsureCreated` destrói dados em próximo deploy em produção real | Alta | Alto | US-065 deve preceder qualquer deploy em ambiente com dados reais |
+| Blazor WASM TTI alto em mobile impacta adoção | Média | Médio | US-072 (Brotli) reduz de 8MB → 2MB |
+| Multi-tenancy adicionado sem cobertura ≥ 85% quebra queries | Alta | Alto | Não iniciar US-076 antes de Sprint 12 |
+| Webhooks sem retry persistido perdem eventos em falha | Média | Médio | Usar RabbitMQ com DLQ (já disponível no stack) |
+| React Query introduz cache stale em dados críticos (estoque) | Baixa | Médio | Configurar `staleTime: 0` para endpoints write-sensitive |
 
 ---
 
-## 7. Decisões de Arquitetura a Tomar
+## 8. Decisões de Arquitetura Abertas
 
-| Decisão | Opções | Recomendação |
-|---|---|---|
-| User Management — módulo separado ou consolidar no Auth? | Módulo separado / consolidar | **Separar** — Auth cuida de credenciais, UserManagement cuida de perfil/roles |
-| Full-text search — Elasticsearch ou Meilisearch? | ES (robusto) / Meilisearch (simples, Rust) | **Meilisearch** para porte atual — migrar para ES se necessário |
-| Background jobs — Hangfire ou Quartz.NET? | Hangfire (UI, persistência) / Quartz (leve) | **Hangfire** — UI de monitoring alinha com postura de observabilidade do projeto |
-| Feature flags — in-process ou serviço externo? | `Microsoft.FeatureManagement` / LaunchDarkly | **FeatureManagement** — sem dependência externa para o porte atual |
+| Decisão | Opções | Recomendação | Prazo |
+|---|---|---|---|
+| Migrations: por módulo ou unificadas? | Schema unificado / schemas separados | **Por módulo** — alinha com isolamento de contextos | Sprint 8 |
+| Full-text search: Meilisearch ou Elasticsearch? | Meilisearch (simples, Rust) / ES (robusto) | **Meilisearch** para porte atual — migrar para ES se volume > 10M docs | Sprint 10 |
+| Background jobs: Hangfire ou Quartz.NET? | Hangfire (UI, persistência) / Quartz (leve) | **Hangfire** — UI de monitoring alinha com observabilidade | Sprint 8 |
+| Kanban: dnd-kit ou react-beautiful-dnd? | dnd-kit (ativo, acessível) / rbd (deprecated) | **dnd-kit** | Sprint 7 |
+| Webhooks: entrega síncrona ou via fila? | Síncrona (simples) / fila RabbitMQ | **RabbitMQ** — consistente com arquitetura existente + retry grátis | Sprint 9 |
 
 ---
 
-*Plano elaborado por Morpheus com base em análise de código, estado das issues, testes e arquitetura atual. Revisão sugerida a cada 2 sprints.*
+## 9. Visão de Longo Prazo (6–12 meses)
+
+```
+v1.0 (atual) — Monolith estabilizado
+     │
+     ▼
+v1.1 (Sprint 7–8) — Produto completo
+     ├── Home Dashboard, Kanban, Notifications
+     └── UserManagement Module, Migrations, Background Jobs
+
+v1.2 (Sprint 9–10) — Plataforma
+     ├── Webhooks, React Query, Full-text search
+     └── Feature Flags, Contract Tests
+
+v2.0 (Sprint 12+) — Multi-tenant SaaS (decisão estratégica)
+     ├── Multi-tenancy + billing basics
+     └── Extração gradual de módulos de maior carga (Issues, Analytics)
+```
+
+---
+
+*Plano elaborado por Morpheus com base em análise de 59 USs entregues, estado real do codebase, cobertura de testes e débitos técnicos identificados. Revisão a cada 2 sprints ou após mudança estratégica relevante.*
