@@ -4,16 +4,8 @@ namespace IMS.Modular.Shared.Database;
 
 /// <summary>
 /// US-024: Seleção condicional de provider de banco de dados.
-///
-/// Regra:
-///   - Development  → SQLite  (zero infraestrutura, arquivo local)
-///   - Staging/Prod → PostgreSQL (via "DefaultConnection" no appsettings/env var)
-///
-/// Uso nos módulos:
-///   services.AddDbContext&lt;MyDbContext&gt;(opt =>
-///       opt.UseImsDatabase(configuration, environment,
-///           sqliteMigrations: typeof(MyDbContext).Assembly.FullName,
-///           npgsqlMigrations: typeof(MyDbContext).Assembly.FullName));
+/// US-065: ApplyMigrationsAsync — usa MigrateAsync em todos os providers reais;
+///         EnsureCreated apenas para InMemory (testes de integração).
 /// </summary>
 public static class DatabaseExtensions
 {
@@ -61,4 +53,25 @@ public static class DatabaseExtensions
     /// </summary>
     public static bool IsPostgres(IWebHostEnvironment environment)
         => !environment.IsDevelopment();
+
+    /// <summary>
+    /// US-065: Aplica migrations (SQLite e PostgreSQL) ou EnsureCreated (InMemory/testes).
+    /// Deve ser chamado no startup em substituição ao GenerateCreateScript manual.
+    /// </summary>
+    public static async Task ApplyMigrationsAsync<TContext>(this IServiceProvider services)
+        where TContext : DbContext
+    {
+        using var scope = services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<TContext>();
+
+        // InMemory: não há migrations — EnsureCreated é suficiente
+        if (db.Database.ProviderName?.Contains("InMemory", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            await db.Database.EnsureCreatedAsync();
+            return;
+        }
+
+        // SQLite (desenvolvimento) e PostgreSQL (produção): aplicar migrations versionadas
+        await db.Database.MigrateAsync();
+    }
 }
