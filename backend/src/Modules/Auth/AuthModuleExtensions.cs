@@ -95,30 +95,9 @@ public static class AuthModuleExtensions
         return services;
     }
 
+    /// <summary>
+    /// US-065: Usa MigrateAsync (SQLite/PostgreSQL) ou EnsureCreated (InMemory/testes).
+    /// </summary>
     public static async Task InitializeAuthModuleAsync(this IServiceProvider services)
-    {
-        using var scope = services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
-
-        // SQLite / InMemory: usar EnsureCreated que funciona sem DDL raw
-        if (db.Database.IsSqlite() || db.Database.ProviderName?.Contains("InMemory", StringComparison.OrdinalIgnoreCase) == true)
-        {
-            await db.Database.EnsureCreatedAsync();
-            return;
-        }
-
-        // PostgreSQL: executar DDL idempotente
-        var script = db.Database.GenerateCreateScript();
-        foreach (var statement in script.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-        {
-            var sql = statement.Trim();
-            if (string.IsNullOrWhiteSpace(sql)) continue;
-            try { await db.Database.ExecuteSqlRawAsync(sql); }
-            catch (Npgsql.PostgresException ex) when (
-                ex.SqlState == "42P07" ||
-                ex.SqlState == "42710" ||
-                ex.SqlState == "23505")
-            { /* already exists */ }
-        }
-    }
+        => await services.ApplyMigrationsAsync<AuthDbContext>();
 }

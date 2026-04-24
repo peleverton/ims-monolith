@@ -53,6 +53,26 @@ jobs:
       - name: Build (Release)
         run: dotnet build ims-monolith.sln -c Release --no-restore
 
+      # ── US-065: Verificar migrations atualizadas ──────────
+      - name: Install EF Core tools
+        run: dotnet tool install --global dotnet-ef --version 9.* || true
+
+      - name: Check pending model changes (Auth)
+        run: dotnet ef migrations has-pending-model-changes --context AuthDbContext --project backend/src
+        continue-on-error: false
+
+      - name: Check pending model changes (Issues)
+        run: dotnet ef migrations has-pending-model-changes --context IssuesDbContext --project backend/src
+        continue-on-error: false
+
+      - name: Check pending model changes (Inventory)
+        run: dotnet ef migrations has-pending-model-changes --context InventoryDbContext --project backend/src
+        continue-on-error: false
+
+      - name: Check pending model changes (InventoryIssues)
+        run: dotnet ef migrations has-pending-model-changes --context InventoryIssuesDbContext --project backend/src
+        continue-on-error: false
+
       # ── Test + Coverage ───────────────────────────────────
       - name: Run tests with coverage
         run: |
