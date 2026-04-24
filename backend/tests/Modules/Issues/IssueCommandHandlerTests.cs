@@ -3,6 +3,7 @@ using IMS.Modular.Modules.Issues.Application.Commands;
 using IMS.Modular.Modules.Issues.Application.Handlers;
 using IMS.Modular.Modules.Issues.Domain.Enums;
 using IMS.Modular.Modules.Issues.Infrastructure;
+using IMS.Modular.Shared.Abstractions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -11,13 +12,14 @@ using Moq;
 namespace IMS.Modular.Tests.Modules.Issues;
 
 /// <summary>
-/// US-026: Unit tests for Issue command handlers using EF InMemory.
+/// US-050: Unit tests for Issue command handlers using EF InMemory.
 /// Pattern: AAA (Arrange / Act / Assert)
 /// </summary>
 public class IssueCommandHandlerTests : IDisposable
 {
     private readonly IssuesDbContext _db;
     private readonly Mock<IMediator> _mediatorMock = new();
+    private readonly Mock<ICacheService> _cacheMock = new();
 
     public IssueCommandHandlerTests()
     {
@@ -26,6 +28,11 @@ public class IssueCommandHandlerTests : IDisposable
             .Options;
 
         _db = new IssuesDbContext(options, _mediatorMock.Object);
+
+        // Cache mock: RemoveByPrefixAsync is a no-op in unit tests
+        _cacheMock
+            .Setup(c => c.RemoveByPrefixAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
     }
 
     public void Dispose() => _db.Dispose();
@@ -38,7 +45,7 @@ public class IssueCommandHandlerTests : IDisposable
     public async Task CreateIssue_ValidCommand_ReturnsSuccessWithIssueDto()
     {
         // Arrange
-        var handler = new CreateIssueCommandHandler(_db, NullLogger<CreateIssueCommandHandler>.Instance);
+        var handler = new CreateIssueCommandHandler(_db, _cacheMock.Object, NullLogger<CreateIssueCommandHandler>.Instance);
         var command = new CreateIssueCommand("Bug in checkout", "Checkout fails", IssuePriority.High, Guid.NewGuid(), null);
 
         // Act
@@ -55,7 +62,7 @@ public class IssueCommandHandlerTests : IDisposable
     public async Task CreateIssue_ValidCommand_PersistsToDatabase()
     {
         // Arrange
-        var handler = new CreateIssueCommandHandler(_db, NullLogger<CreateIssueCommandHandler>.Instance);
+        var handler = new CreateIssueCommandHandler(_db, _cacheMock.Object, NullLogger<CreateIssueCommandHandler>.Instance);
         var reporterId = Guid.NewGuid();
         var command = new CreateIssueCommand("Persisted issue", "Description", IssuePriority.Low, reporterId, null);
 
@@ -146,7 +153,7 @@ public class IssueCommandHandlerTests : IDisposable
     public async Task DeleteIssue_ExistingIssue_RemovesFromDatabase()
     {
         // Arrange
-        var createHandler = new CreateIssueCommandHandler(_db, NullLogger<CreateIssueCommandHandler>.Instance);
+        var createHandler = new CreateIssueCommandHandler(_db, _cacheMock.Object, NullLogger<CreateIssueCommandHandler>.Instance);
         var created = await createHandler.Handle(
             new CreateIssueCommand("To delete", "Desc", IssuePriority.Low, Guid.NewGuid(), null),
             CancellationToken.None);

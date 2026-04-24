@@ -3,6 +3,7 @@ using IMS.Modular.Modules.Inventory.Application.Commands;
 using IMS.Modular.Modules.Inventory.Application.Handlers;
 using IMS.Modular.Modules.Inventory.Domain.Enums;
 using IMS.Modular.Modules.Inventory.Infrastructure;
+using IMS.Modular.Shared.Abstractions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -11,13 +12,14 @@ using Moq;
 namespace IMS.Modular.Tests.Modules.Inventory;
 
 /// <summary>
-/// Unit tests for Inventory command handlers using EF InMemory.
+/// US-050: Unit tests for Inventory command handlers using EF InMemory.
 /// Pattern: AAA (Arrange / Act / Assert)
 /// </summary>
 public class InventoryCommandHandlerTests : IDisposable
 {
     private readonly InventoryDbContext _db;
     private readonly Mock<IMediator> _mediator = new();
+    private readonly Mock<ICacheService> _cache = new();
 
     public InventoryCommandHandlerTests()
     {
@@ -25,6 +27,12 @@ public class InventoryCommandHandlerTests : IDisposable
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         _db = new InventoryDbContext(options, _mediator.Object);
+
+        // Cache mock: all operations are no-ops in unit tests
+        _cache.Setup(c => c.RemoveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+              .Returns(Task.CompletedTask);
+        _cache.Setup(c => c.RemoveByPrefixAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+              .Returns(Task.CompletedTask);
     }
 
     public void Dispose() => _db.Dispose();
@@ -32,7 +40,7 @@ public class InventoryCommandHandlerTests : IDisposable
     // ── Helpers ───────────────────────────────────────────────────
 
     private CreateProductCommandHandler ProductHandler() =>
-        new(new ProductRepository(_db), NullLogger<CreateProductCommandHandler>.Instance);
+        new(new ProductRepository(_db), _cache.Object, NullLogger<CreateProductCommandHandler>.Instance);
 
     private static CreateProductCommand ProductCommand(string sku = "SKU-TEST-001") =>
         new("Widget", sku, ProductCategory.Electronics,
@@ -81,7 +89,7 @@ public class InventoryCommandHandlerTests : IDisposable
         var created = (await ProductHandler().Handle(ProductCommand("SKU-UPD"), CancellationToken.None)).Value!;
 
         var updateHandler = new UpdateProductCommandHandler(
-            new ProductRepository(_db), NullLogger<UpdateProductCommandHandler>.Instance);
+            new ProductRepository(_db), _cache.Object, NullLogger<UpdateProductCommandHandler>.Instance);
 
         var cmd = new UpdateProductCommand(
             created.Id, "Updated Widget", null, ProductCategory.Electronics,
@@ -97,7 +105,7 @@ public class InventoryCommandHandlerTests : IDisposable
     public async Task UpdateProduct_NonExistent_ReturnsNotFound()
     {
         var updateHandler = new UpdateProductCommandHandler(
-            new ProductRepository(_db), NullLogger<UpdateProductCommandHandler>.Instance);
+            new ProductRepository(_db), _cache.Object, NullLogger<UpdateProductCommandHandler>.Instance);
 
         var cmd = new UpdateProductCommand(
             Guid.NewGuid(), "Ghost", null, ProductCategory.Electronics,
@@ -115,7 +123,7 @@ public class InventoryCommandHandlerTests : IDisposable
         var created = (await ProductHandler().Handle(ProductCommand("SKU-DEL"), CancellationToken.None)).Value!;
 
         var deleteHandler = new DeleteProductCommandHandler(
-            new ProductRepository(_db), NullLogger<DeleteProductCommandHandler>.Instance);
+            new ProductRepository(_db), _cache.Object, NullLogger<DeleteProductCommandHandler>.Instance);
 
         var result = await deleteHandler.Handle(new DeleteProductCommand(created.Id), CancellationToken.None);
 
@@ -133,6 +141,7 @@ public class InventoryCommandHandlerTests : IDisposable
         var adjustHandler = new AdjustStockCommandHandler(
             new ProductRepository(_db),
             new StockMovementRepository(_db),
+            _cache.Object,
             NullLogger<AdjustStockCommandHandler>.Instance);
 
         var result = await adjustHandler.Handle(
@@ -151,6 +160,7 @@ public class InventoryCommandHandlerTests : IDisposable
         var adjustHandler = new AdjustStockCommandHandler(
             new ProductRepository(_db),
             new StockMovementRepository(_db),
+            _cache.Object,
             NullLogger<AdjustStockCommandHandler>.Instance);
 
         await adjustHandler.Handle(

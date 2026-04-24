@@ -28,18 +28,26 @@ public class InventoryModule : IEndpointModule
         var group = endpoints
             .MapGroup("/api/inventory/products")
             .WithTags("Inventory - Products")
-            .RequireAuthorization();
+            .RequireAuthorization(Policies.CanViewInventory);
 
         group.MapGet("/", GetProducts).WithName("GetProducts");
         group.MapGet("/{id:guid}", GetProductById).WithName("GetProductById");
         group.MapGet("/sku/{sku}", GetProductBySku).WithName("GetProductBySku");
-        group.MapPost("/", CreateProduct).WithName("CreateProduct");
-        group.MapPut("/{id:guid}", UpdateProduct).WithName("UpdateProduct");
-        group.MapPatch("/{id:guid}/pricing", UpdatePricing).WithName("UpdateProductPricing");
-        group.MapPatch("/{id:guid}/stock/adjust", AdjustStock).WithName("AdjustStock");
-        group.MapPatch("/{id:guid}/stock/transfer", TransferStock).WithName("TransferStock");
-        group.MapPatch("/{id:guid}/discontinue", DiscontinueProduct).WithName("DiscontinueProduct");
-        group.MapDelete("/{id:guid}", DeleteProduct).WithName("DeleteProduct");
+        // Write operations: Admin or Manager only (US-057)
+        group.MapPost("/", CreateProduct).WithName("CreateProduct")
+             .RequireAuthorization(Policies.CanManageInventory);
+        group.MapPut("/{id:guid}", UpdateProduct).WithName("UpdateProduct")
+             .RequireAuthorization(Policies.CanManageInventory);
+        group.MapPatch("/{id:guid}/pricing", UpdatePricing).WithName("UpdateProductPricing")
+             .RequireAuthorization(Policies.CanManageInventory);
+        group.MapPatch("/{id:guid}/stock/adjust", AdjustStock).WithName("AdjustStock")
+             .RequireAuthorization(Policies.CanManageInventory);
+        group.MapPatch("/{id:guid}/stock/transfer", TransferStock).WithName("TransferStock")
+             .RequireAuthorization(Policies.CanManageInventory);
+        group.MapPatch("/{id:guid}/discontinue", DiscontinueProduct).WithName("DiscontinueProduct")
+             .RequireAuthorization(Policies.CanManageInventory);
+        group.MapDelete("/{id:guid}", DeleteProduct).WithName("DeleteProduct")
+             .RequireAuthorization(Policies.CanManageInventory);
     }
 
     private static async Task<IResult> GetProducts(
@@ -192,9 +200,10 @@ public class InventoryModule : IEndpointModule
         var group = endpoints
             .MapGroup("/api/inventory/stock-movements")
             .WithTags("Inventory - Stock Movements")
-            .RequireAuthorization();
+            .RequireAuthorization(Policies.CanManageInventory);
 
-        group.MapGet("/", GetStockMovements).WithName("GetStockMovements");
+        group.MapGet("/", GetStockMovements).WithName("GetStockMovements")
+             .RequireAuthorization(Policies.CanViewInventory);
         group.MapPost("/", CreateStockMovement).WithName("CreateStockMovement");
         group.MapPost("/bulk", BulkCreateStockMovements).WithName("BulkCreateStockMovements");
         group.MapDelete("/{id:guid}", DeleteStockMovement).WithName("DeleteStockMovement");
@@ -271,15 +280,20 @@ public class InventoryModule : IEndpointModule
         var group = endpoints
             .MapGroup("/api/inventory/suppliers")
             .WithTags("Inventory - Suppliers")
-            .RequireAuthorization();
+            .RequireAuthorization(Policies.CanViewInventory);
 
         group.MapGet("/", GetSuppliers).WithName("GetSuppliers");
         group.MapGet("/{id:guid}", GetSupplierById).WithName("GetSupplierById");
-        group.MapPost("/", CreateSupplier).WithName("CreateSupplier");
-        group.MapPut("/{id:guid}", UpdateSupplier).WithName("UpdateSupplier");
-        group.MapPatch("/{id:guid}/activate", ActivateSupplier).WithName("ActivateSupplier");
-        group.MapPatch("/{id:guid}/deactivate", DeactivateSupplier).WithName("DeactivateSupplier");
-        group.MapDelete("/{id:guid}", DeleteSupplier).WithName("DeleteSupplier");
+        group.MapPost("/", CreateSupplier).WithName("CreateSupplier")
+             .RequireAuthorization(Policies.CanManageInventory);
+        group.MapPut("/{id:guid}", UpdateSupplier).WithName("UpdateSupplier")
+             .RequireAuthorization(Policies.CanManageInventory);
+        group.MapPatch("/{id:guid}/activate", ActivateSupplier).WithName("ActivateSupplier")
+             .RequireAuthorization(Policies.CanManageInventory);
+        group.MapPatch("/{id:guid}/deactivate", DeactivateSupplier).WithName("DeactivateSupplier")
+             .RequireAuthorization(Policies.CanManageInventory);
+        group.MapDelete("/{id:guid}", DeleteSupplier).WithName("DeleteSupplier")
+             .RequireAuthorization(Policies.CanManageInventory);
     }
 
     private static async Task<IResult> GetSuppliers(
@@ -366,16 +380,22 @@ public class InventoryModule : IEndpointModule
         var group = endpoints
             .MapGroup("/api/inventory/locations")
             .WithTags("Inventory - Locations")
-            .RequireAuthorization();
+            .RequireAuthorization(Policies.CanViewInventory);
 
         group.MapGet("/", GetLocations).WithName("GetLocations");
         group.MapGet("/{id:guid}", GetLocationById).WithName("GetLocationById");
-        group.MapPost("/", CreateLocation).WithName("CreateLocation");
-        group.MapPut("/{id:guid}", UpdateLocation).WithName("UpdateLocation");
-        group.MapPatch("/{id:guid}/capacity", UpdateLocationCapacity).WithName("UpdateLocationCapacity");
-        group.MapPatch("/{id:guid}/activate", ActivateLocation).WithName("ActivateLocation");
-        group.MapPatch("/{id:guid}/deactivate", DeactivateLocation).WithName("DeactivateLocation");
-        group.MapDelete("/{id:guid}", DeleteLocation).WithName("DeleteLocation");
+        group.MapPost("/", CreateLocation).WithName("CreateLocation")
+             .RequireAuthorization(Policies.CanManageInventory);
+        group.MapPut("/{id:guid}", UpdateLocation).WithName("UpdateLocation")
+             .RequireAuthorization(Policies.CanManageInventory);
+        group.MapPatch("/{id:guid}/capacity", UpdateLocationCapacity).WithName("UpdateLocationCapacity")
+             .RequireAuthorization(Policies.CanManageInventory);
+        group.MapPatch("/{id:guid}/activate", ActivateLocation).WithName("ActivateLocation")
+             .RequireAuthorization(Policies.CanManageInventory);
+        group.MapPatch("/{id:guid}/deactivate", DeactivateLocation).WithName("DeactivateLocation")
+             .RequireAuthorization(Policies.CanManageInventory);
+        group.MapDelete("/{id:guid}", DeleteLocation).WithName("DeleteLocation")
+             .RequireAuthorization(Policies.CanManageInventory);
     }
 
     private static async Task<IResult> GetLocations(

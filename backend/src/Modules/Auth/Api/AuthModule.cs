@@ -18,6 +18,7 @@ public class AuthModule : IEndpointModule
         group.MapPost("/login", Login).AllowAnonymous().RequireRateLimiting(RateLimitingExtensions.Policies.Auth).WithName("Login");
         group.MapPost("/register", Register).AllowAnonymous().RequireRateLimiting(RateLimitingExtensions.Policies.Auth).WithName("Register");
         group.MapPost("/refresh", Refresh).AllowAnonymous().WithName("RefreshToken");
+        group.MapPost("/logout", Logout).AllowAnonymous().WithName("Logout"); // US-055
         group.MapGet("/me", GetMe).RequireAuthorization().WithName("GetMe");
         group.MapGet("/test", TestAuth).RequireAuthorization().WithName("TestAuth");
 
@@ -109,5 +110,23 @@ public class AuthModule : IEndpointModule
                 .ToArray(),
             claims = user.Claims.Select(c => new { c.Type, c.Value }).ToArray()
         });
+    }
+
+    // ── US-055: Logout — revokes the refresh token ────────────────────────
+
+    private static async Task<IResult> Logout(
+        RefreshTokenRequest request,
+        IAuthenticationService authService,
+        ILogger<AuthModule> logger)
+    {
+        var revoked = await authService.LogoutAsync(request.RefreshToken);
+        if (!revoked)
+        {
+            logger.LogWarning("Logout attempted with invalid or already-revoked refresh token");
+            return Results.BadRequest(new { message = "Invalid or already-revoked refresh token" });
+        }
+
+        logger.LogInformation("User logged out — refresh token revoked");
+        return Results.Ok(new { message = "Logged out successfully" });
     }
 }
