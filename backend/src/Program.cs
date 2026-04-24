@@ -9,6 +9,7 @@ using IMS.Modular.Modules.InventoryIssues;
 using IMS.Modular.Modules.InventoryIssues.Api;
 using IMS.Modular.Modules.Issues;
 using IMS.Modular.Modules.Issues.Api;
+using IMS.Modular.Modules.Jobs;
 using IMS.Modular.Shared.Abstractions;
 using IMS.Modular.Shared.Behaviors;
 using IMS.Modular.Shared.Caching;
@@ -152,6 +153,9 @@ builder.Services.AddInventoryModule(builder.Configuration);
 builder.Services.AddInventoryIssuesModule(builder.Configuration);
 builder.Services.AddAnalyticsModule(builder.Configuration);
 
+// US-067: Background Jobs com Hangfire
+builder.Services.AddJobsModule(builder.Configuration, builder.Environment);
+
 // ============================================================
 // HEALTH CHECKS (US-007)
 // ============================================================
@@ -215,6 +219,9 @@ app.UseUserContext();
 
 // Output Caching (US-008 — must be after auth so cached responses respect authorization)
 app.UseOutputCache();
+
+// US-067: Hangfire Dashboard + registrar jobs recorrentes
+app.UseJobsModule();
 
 // ============================================================
 // SYSTEM ENDPOINTS
