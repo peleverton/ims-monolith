@@ -9,7 +9,8 @@ using IMS.Modular.Modules.InventoryIssues;
 using IMS.Modular.Modules.InventoryIssues.Api;
 using IMS.Modular.Modules.Issues;
 using IMS.Modular.Modules.Issues.Api;
-using IMS.Modular.Modules.Jobs;
+using IMS.Modular.Modules.Notifications;
+using IMS.Modular.Modules.Notifications.Api;
 using IMS.Modular.Shared.Abstractions;
 using IMS.Modular.Shared.Behaviors;
 using IMS.Modular.Shared.Caching;
@@ -110,25 +111,8 @@ builder.Services.AddMiddlewareServices();
 // CORS
 builder.Services.AddCors(options =>
 {
-    if (builder.Environment.IsDevelopment())
-    {
-        // Development: allow any origin for local dev convenience
-        options.AddDefaultPolicy(policy =>
-            policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
-    }
-    else
-    {
-        // Production: restrict to configured allowed origins (US-056)
-        var allowedOrigins = builder.Configuration
-            .GetSection("Cors:AllowedOrigins")
-            .Get<string[]>() ?? [];
-
-        options.AddDefaultPolicy(policy =>
-            policy.WithOrigins(allowedOrigins)
-                  .AllowAnyHeader()
-                  .AllowAnyMethod()
-                  .AllowCredentials());
-    }
+    options.AddDefaultPolicy(policy =>
+        policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
 });
 
 // ============================================================
@@ -153,8 +137,8 @@ builder.Services.AddInventoryModule(builder.Configuration);
 builder.Services.AddInventoryIssuesModule(builder.Configuration);
 builder.Services.AddAnalyticsModule(builder.Configuration);
 
-// US-067: Background Jobs com Hangfire
-builder.Services.AddJobsModule(builder.Configuration, builder.Environment);
+// US-066: Notifications Module
+builder.Services.AddNotificationsModule(builder.Configuration, builder.Environment);
 
 // ============================================================
 // HEALTH CHECKS (US-007)
@@ -220,9 +204,6 @@ app.UseUserContext();
 // Output Caching (US-008 — must be after auth so cached responses respect authorization)
 app.UseOutputCache();
 
-// US-067: Hangfire Dashboard + registrar jobs recorrentes
-app.UseJobsModule();
-
 // ============================================================
 // SYSTEM ENDPOINTS
 // ============================================================
@@ -264,6 +245,7 @@ IssuesModule.Map(app);
 InventoryModule.Map(app);
 InventoryIssuesModule.Map(app);
 AnalyticsModule.Map(app);
+NotificationsModule.Map(app);
 
 // SignalR hub
 app.MapHub<NotificationsHub>("/hubs/notifications").AllowAnonymous();
@@ -279,6 +261,7 @@ try
     await app.Services.InitializeIssuesModuleAsync();
     await app.Services.InitializeInventoryModuleAsync();
     await app.Services.InitializeInventoryIssuesModuleAsync();
+    await app.Services.InitializeNotificationsModuleAsync();
 }
 catch (Exception ex)
 {
