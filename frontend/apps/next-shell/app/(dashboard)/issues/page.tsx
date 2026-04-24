@@ -3,6 +3,9 @@ import type { IssueDto, PagedResult } from "@/lib/types";
 import { StatusBadge, PriorityBadge } from "@/components/badges";
 import Link from "next/link";
 import { Plus, MessageSquare } from "lucide-react";
+import { IssuesViewToggle } from "@/components/issues/issues-view-toggle";
+import { KanbanBoardWrapper } from "@/components/issues/kanban-board-wrapper";
+import { Suspense } from "react";
 
 interface SearchParams {
   page?: string;
@@ -10,12 +13,14 @@ interface SearchParams {
   status?: string;
   priority?: string;
   search?: string;
+  view?: string;
 }
 
 async function getIssues(params: SearchParams) {
+  const isKanban = params.view === "kanban";
   const qs = new URLSearchParams({
     pageNumber: params.page ?? "1",
-    pageSize: params.pageSize ?? "15",
+    pageSize: isKanban ? "100" : (params.pageSize ?? "15"),
     ...(params.status && { status: params.status }),
     ...(params.priority && { priority: params.priority }),
     ...(params.search && { searchTerm: params.search }),
@@ -32,6 +37,7 @@ export default async function IssuesPage({
   searchParams: Promise<SearchParams>;
 }) {
   const params = await searchParams;
+  const isKanban = params.view === "kanban";
   const data = await getIssues(params).catch(() => null);
 
   return (
@@ -43,20 +49,31 @@ export default async function IssuesPage({
             {data ? `${data.totalCount} issues encontradas` : "Carregando..."}
           </p>
         </div>
-        <Link
-          href="/issues/new"
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-500 transition-colors"
-        >
-          <Plus size={16} />
-          Nova Issue
-        </Link>
+        <div className="flex items-center gap-3">
+          <Suspense>
+            <IssuesViewToggle />
+          </Suspense>
+          <Link
+            href="/issues/new"
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-500 transition-colors"
+          >
+            <Plus size={16} />
+            Nova Issue
+          </Link>
+        </div>
       </div>
 
-      {/* Filtros */}
       <IssueFilters current={params} />
 
-      {/* Tabela */}
-      {!data ? (
+      {isKanban ? (
+        !data ? (
+          <div className="bg-(--bg-surface) rounded-xl border border-(--border) p-8 text-center text-(--text-secondary)">
+            Erro ao carregar issues.
+          </div>
+        ) : (
+          <KanbanBoardWrapper issues={data.items} />
+        )
+      ) : !data ? (
         <div className="bg-(--bg-surface) rounded-xl border border-(--border) p-8 text-center text-(--text-secondary)">
           Erro ao carregar issues. Verifique se o servidor está rodando.
         </div>
@@ -110,25 +127,16 @@ export default async function IssuesPage({
             </tbody>
           </table>
 
-          {/* Paginação */}
           <div className="px-4 py-3 border-t border-(--border) flex items-center justify-between text-sm text-(--text-secondary)">
-            <span>
-              Página {data.pageNumber} de {data.totalPages}
-            </span>
+            <span>Página {data.pageNumber} de {data.totalPages}</span>
             <div className="flex gap-2">
               {data.pageNumber > 1 && (
-                <Link
-                  href={`?page=${data.pageNumber - 1}`}
-                  className="px-3 py-1 rounded border border-(--border-input) text-(--text-primary) hover:bg-(--bg-subtle)"
-                >
+                <Link href={`?page=${data.pageNumber - 1}`} className="px-3 py-1 rounded border border-(--border-input) text-(--text-primary) hover:bg-(--bg-subtle)">
                   Anterior
                 </Link>
               )}
               {data.pageNumber < data.totalPages && (
-                <Link
-                  href={`?page=${data.pageNumber + 1}`}
-                  className="px-3 py-1 rounded border border-(--border-input) text-(--text-primary) hover:bg-(--bg-subtle)"
-                >
+                <Link href={`?page=${data.pageNumber + 1}`} className="px-3 py-1 rounded border border-(--border-input) text-(--text-primary) hover:bg-(--bg-subtle)">
                   Próxima
                 </Link>
               )}
@@ -168,10 +176,8 @@ function IssueFilters({ current }: { current: SearchParams }) {
         <option value="">Todas as prioridades</option>
         {priorities.map((p) => <option key={p} value={p}>{p}</option>)}
       </select>
-      <button
-        type="submit"
-        className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-500 transition-colors"
-      >
+      {current.view && <input type="hidden" name="view" value={current.view} />}
+      <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-500 transition-colors">
         Filtrar
       </button>
     </form>
