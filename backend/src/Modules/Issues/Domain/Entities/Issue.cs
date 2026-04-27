@@ -14,6 +14,7 @@ public class Issue : BaseEntity
     public Guid? AssigneeId { get; private set; }
     public Guid ReporterId { get; private set; }
     public DateTime? DueDate { get; private set; }
+    public DateTime? ResolvedAt { get; private set; }
 
     public List<IssueComment> Comments { get; private set; } = [];
     public List<IssueActivity> Activities { get; private set; } = [];
@@ -58,7 +59,10 @@ public class Issue : BaseEntity
         AddDomainEvent(new IssueStatusChangedEvent(Id, oldStatus, status, userId));
 
         if (status is IssueStatus.Closed or IssueStatus.Resolved)
+        {
+            ResolvedAt = DateTime.UtcNow;
             AddDomainEvent(new IssueCompletedEvent(Id, userId, CreatedAt));
+        }
     }
 
     public void AssignTo(Guid assigneeId, Guid userId)

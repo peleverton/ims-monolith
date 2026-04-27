@@ -13,6 +13,7 @@ public record IssueDto(
     DateTime CreatedAt,
     DateTime? UpdatedAt,
     DateTime? DueDate,
+    DateTime? ResolvedAt,
     List<IssueCommentDto> Comments,
     List<IssueActivityDto> Activities,
     List<IssueTagDto> Tags);

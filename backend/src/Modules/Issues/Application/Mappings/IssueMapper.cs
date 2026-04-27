@@ -16,6 +16,7 @@ public static class IssueMapper
         issue.CreatedAt,
         issue.UpdatedAt,
         issue.DueDate,
+        issue.ResolvedAt,
         issue.Comments.Select(c => new IssueCommentDto(c.Id, c.Content, c.AuthorId, c.CreatedAt)).ToList(),
         issue.Activities.Select(a => new IssueActivityDto(a.Id, a.ActivityType.ToString(), a.Description, a.UserId, a.Timestamp)).ToList(),
         issue.Tags.Select(t => new IssueTagDto(t.Name, t.Color)).ToList());
