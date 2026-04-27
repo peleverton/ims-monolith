@@ -3,6 +3,10 @@ using IMS.Modular.Modules.Analytics;
 using IMS.Modular.Modules.Analytics.Api;
 using IMS.Modular.Modules.Auth;
 using IMS.Modular.Modules.Auth.Api;
+using IMS.Modular.Modules.Features.Api;
+using IMS.Modular.Modules.Search;
+using IMS.Modular.Modules.Search.Api;
+using IMS.Modular.Shared.FeatureFlags;
 using IMS.Modular.Modules.Inventory;
 using IMS.Modular.Modules.Inventory.Api;
 using IMS.Modular.Modules.InventoryIssues;
@@ -144,6 +148,9 @@ builder.Services.AddNotificationsModule(builder.Configuration, builder.Environme
 // US-069: Webhooks Module
 builder.Services.AddWebhooksModule(builder.Configuration, builder.Environment);
 
+// US-071: Full-text Search (Meilisearch)
+builder.Services.AddSearchModule(builder.Configuration);
+
 // ============================================================
 // HEALTH CHECKS (US-007)
 // ============================================================
@@ -251,6 +258,8 @@ InventoryIssuesModule.Map(app);
 AnalyticsModule.Map(app);
 NotificationsModule.Map(app);
 app.MapWebhooksModule();
+SearchModule.Map(app);
+FeaturesModule.Map(app);
 
 // SignalR hub
 app.MapHub<NotificationsHub>("/hubs/notifications").AllowAnonymous();
@@ -268,6 +277,7 @@ try
     await app.Services.InitializeInventoryIssuesModuleAsync();
     await app.Services.InitializeNotificationsModuleAsync();
     await app.Services.InitializeWebhooksModuleAsync();
+    await app.Services.InitializeSearchModuleAsync();
 }
 catch (Exception ex)
 {

@@ -40,12 +40,16 @@ services:
       Jwt__Audience: ${JWT_AUDIENCE:-IMS.Client}
       OpenTelemetry__ServiceName: ims-monolith
       OpenTelemetry__OtlpEndpoint: ""
+      Meilisearch__Host: "http://meilisearch:7700"
+      Meilisearch__ApiKey: ${MEILISEARCH_MASTER_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
       rabbitmq:
+        condition: service_healthy
+      meilisearch:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8080/health/live"]
@@ -139,6 +143,29 @@ services:
       - ims-net
 
   # ─────────────────────────────────────────────────────────
+  # Meilisearch — Full-text search engine (US-071)
+  # ─────────────────────────────────────────────────────────
+  meilisearch:
+    image: getmeili/meilisearch:v1.7
+    container_name: ims-meilisearch
+    restart: unless-stopped
+    ports:
+      - "${MEILISEARCH_PORT:-7700}:7700"
+    environment:
+      MEILI_MASTER_KEY: ${MEILISEARCH_MASTER_KEY:-}
+      MEILI_NO_ANALYTICS: "true"
+    volumes:
+      - meilisearch_data:/meili_data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:7700/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - ims-net
+
+  # ─────────────────────────────────────────────────────────
   # RabbitMQ 3.13
   # ─────────────────────────────────────────────────────────
   rabbitmq:
@@ -172,6 +199,8 @@ volumes:
   redis_data:
     driver: local
   rabbitmq_data:
+    driver: local
+  meilisearch_data:
     driver: local
 
 # ─────────────────────────────────────────────────────────
