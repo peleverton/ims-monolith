@@ -1,4 +1,3 @@
-using IMS.Modular.Modules.Features.Api;
 using IMS.Modular.Shared.FeatureFlags;
 using FluentValidation;
 using IMS.Modular.Modules.Analytics;
@@ -8,7 +7,6 @@ using IMS.Modular.Modules.Auth.Api;
 using IMS.Modular.Modules.Features.Api;
 using IMS.Modular.Modules.Search;
 using IMS.Modular.Modules.Search.Api;
-using IMS.Modular.Shared.FeatureFlags;
 using IMS.Modular.Modules.Inventory;
 using IMS.Modular.Modules.Inventory.Api;
 using IMS.Modular.Modules.InventoryIssues;
@@ -26,8 +24,11 @@ using IMS.Modular.Shared.Middleware;
 using IMS.Modular.Shared.Observability;
 using IMS.Modular.Shared.Messaging;
 using IMS.Modular.Shared.Outbox;
+using IMS.Modular.Shared.Proxy;
 using IMS.Modular.Shared.RateLimiting;
+using IMS.Modular.Shared.MultiTenancy;
 using MediatR;
+using Microsoft.FeatureManagement;
 using Microsoft.OpenApi.Models;
 using Serilog;
 using System.Text.Json.Serialization;
@@ -153,8 +154,14 @@ builder.Services.AddWebhooksModule(builder.Configuration, builder.Environment);
 // US-074: Feature Flags
 builder.Services.AddImsFeatureFlags(builder.Configuration);
 
+// US-078: Multi-Tenancy
+builder.Services.AddMultiTenancy();
+
 // US-071: Full-text Search (Meilisearch)
 builder.Services.AddSearchModule(builder.Configuration);
+
+// US-079: YARP proxy for Issues microservice (only active when UseIssuesMicroservice flag is on)
+builder.Services.AddIssuesProxy(builder.Configuration);
 
 // ============================================================
 // HEALTH CHECKS (US-007)
@@ -217,6 +224,9 @@ app.UseAuthorization();
 // UserContext middleware (must be after auth — extracts JWT claims into IUserContext)
 app.UseUserContext();
 
+// US-078: Multi-Tenancy — resolve tenant após auth (pode usar claim JWT)
+app.UseMultiTenancy();
+
 // Output Caching (US-008 — must be after auth so cached responses respect authorization)
 app.UseOutputCache();
 
@@ -268,6 +278,13 @@ FeaturesModule.Map(app);
 
 // SignalR hub
 app.MapHub<NotificationsHub>("/hubs/notifications").AllowAnonymous();
+
+// US-079: YARP proxy — routes /api/issues to issues microservice when feature flag is enabled
+var featureManager = app.Services.GetRequiredService<IFeatureManager>();
+if (await featureManager.IsEnabledAsync("UseIssuesMicroservice"))
+{
+    app.MapIssuesProxy();
+}
 
 // ============================================================
 // DATABASE INITIALIZATION

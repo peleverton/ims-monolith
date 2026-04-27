@@ -59,6 +59,9 @@
 
     <!-- Dapper (CQRS Read Side) -->
     <PackageReference Include="Dapper" Version="2.*" />
+
+    <!-- YARP Reverse Proxy (US-079: /api/issues → ims-issues-service when feature flag enabled) -->
+    <PackageReference Include="Yarp.ReverseProxy" Version="2.*" />
   </ItemGroup>
 
 </Project>
