@@ -27,7 +27,7 @@ WORKDIR /app
 
 COPY frontend/apps/next-shell/package.json frontend/apps/next-shell/package-lock.json ./
 
-RUN npm ci --prefer-offline
+RUN npm install --prefer-offline
 
 # ── 3. Next.js build ─────────────────────────────────────────
 FROM node:20-alpine AS nextjs-build
