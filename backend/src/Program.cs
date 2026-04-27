@@ -11,6 +11,7 @@ using IMS.Modular.Modules.Issues;
 using IMS.Modular.Modules.Issues.Api;
 using IMS.Modular.Modules.Notifications;
 using IMS.Modular.Modules.Notifications.Api;
+using IMS.Modular.Modules.Webhooks;
 using IMS.Modular.Shared.Abstractions;
 using IMS.Modular.Shared.Behaviors;
 using IMS.Modular.Shared.Caching;
@@ -140,6 +141,9 @@ builder.Services.AddAnalyticsModule(builder.Configuration);
 // US-066: Notifications Module
 builder.Services.AddNotificationsModule(builder.Configuration, builder.Environment);
 
+// US-069: Webhooks Module
+builder.Services.AddWebhooksModule(builder.Configuration, builder.Environment);
+
 // ============================================================
 // HEALTH CHECKS (US-007)
 // ============================================================
@@ -246,6 +250,7 @@ InventoryModule.Map(app);
 InventoryIssuesModule.Map(app);
 AnalyticsModule.Map(app);
 NotificationsModule.Map(app);
+app.MapWebhooksModule();
 
 // SignalR hub
 app.MapHub<NotificationsHub>("/hubs/notifications").AllowAnonymous();
@@ -262,6 +267,7 @@ try
     await app.Services.InitializeInventoryModuleAsync();
     await app.Services.InitializeInventoryIssuesModuleAsync();
     await app.Services.InitializeNotificationsModuleAsync();
+    await app.Services.InitializeWebhooksModuleAsync();
 }
 catch (Exception ex)
 {
