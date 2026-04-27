@@ -115,5 +115,11 @@
     "label": "Language",
     "pt": "Português",
     "en": "English"
+  },
+  "search": {
+    "placeholder": "Search...",
+    "searching": "Searching...",
+    "noResults": "No results found",
+    "andMore": "{count} more results"
   }
 }

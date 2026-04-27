@@ -13,6 +13,7 @@
     <PackageReference Include="Hangfire.AspNetCore" Version="1.8.*" />
     <PackageReference Include="Hangfire.InMemory" Version="0.6.*" />
     <PackageReference Include="Hangfire.PostgreSql" Version="1.20.*" />
+    <PackageReference Include="MeiliSearch" Version="0.14.3" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.*" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.*" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.*" />
