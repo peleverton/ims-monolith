@@ -59,6 +59,35 @@ const nextConfig: NextConfig = {
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
         ],
       },
+      // US-072: Cache-Control immutable for Blazor WASM assets (fingerprinted, never change)
+      {
+        source: "/_blazor/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
+      // US-072: Serve .br files with correct Content-Encoding so browsers decompress them
+      {
+        source: "/_blazor/:path*.wasm.br",
+        headers: [
+          { key: "Content-Encoding", value: "br" },
+          { key: "Content-Type", value: "application/wasm" },
+        ],
+      },
+      {
+        source: "/_blazor/:path*.dll.br",
+        headers: [
+          { key: "Content-Encoding", value: "br" },
+          { key: "Content-Type", value: "application/octet-stream" },
+        ],
+      },
+      {
+        source: "/_blazor/:path*.js.br",
+        headers: [
+          { key: "Content-Encoding", value: "br" },
+          { key: "Content-Type", value: "application/javascript" },
+        ],
+      },
     ];
   },
 };
