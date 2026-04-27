@@ -1,0 +1,246 @@
+apiVersion: 1
+
+groups:
+  # ── HTTP Error Rate ──────────────────────────────────────────────────────────
+  - orgId: 1
+    name: IMS HTTP Alerts
+    folder: IMS
+    interval: 1m
+    rules:
+      - uid: ims-high-5xx-rate
+        title: High 5xx Error Rate
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: |
+                sum(rate(http_requests_received_total{status=~"5.."}[1m])) > 5
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: "__expr__"
+            model:
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: [A]
+                  reducer:
+                    type: last
+              refId: C
+              type: classic_conditions
+        noDataState: NoData
+        execErrState: Error
+        for: 2m
+        annotations:
+          summary: "Alta taxa de erros 5xx detectada"
+          description: "Mais de 5 requisições/min com status 500 nos últimos 5 minutos."
+        labels:
+          severity: critical
+          team: backend
+
+      # ── P99 Latency ─────────────────────────────────────────────────────────
+      - uid: ims-high-p99-latency
+        title: High P99 Latency
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: |
+                histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) > 2
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: "__expr__"
+            model:
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: [A]
+                  reducer:
+                    type: last
+              refId: C
+              type: classic_conditions
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          summary: "Latência P99 elevada (>2s)"
+          description: "O percentil 99 de latência está acima de 2 segundos por mais de 5 minutos."
+        labels:
+          severity: warning
+          team: backend
+
+  # ── RabbitMQ ────────────────────────────────────────────────────────────────
+  - orgId: 1
+    name: IMS RabbitMQ Alerts
+    folder: IMS
+    interval: 1m
+    rules:
+      - uid: ims-rabbitmq-queue-growing
+        title: RabbitMQ Queue Growing
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: |
+                rabbitmq_queue_messages_ready > 100
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: "__expr__"
+            model:
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: [A]
+                  reducer:
+                    type: last
+              refId: C
+              type: classic_conditions
+        noDataState: NoData
+        execErrState: Error
+        for: 10m
+        annotations:
+          summary: "Fila RabbitMQ acumulando mensagens"
+          description: "Mais de 100 mensagens pendentes em alguma fila por mais de 10 minutos."
+        labels:
+          severity: warning
+          team: backend
+
+  # ── Inventory ───────────────────────────────────────────────────────────────
+  - orgId: 1
+    name: IMS Inventory Alerts
+    folder: IMS
+    interval: 5m
+    rules:
+      - uid: ims-low-stock-alert
+        title: LowStock
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: |
+                ims_inventory_low_stock_products_total > 0
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: "__expr__"
+            model:
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: [A]
+                  reducer:
+                    type: last
+              refId: C
+              type: classic_conditions
+        noDataState: NoData
+        execErrState: Error
+        for: 0s
+        annotations:
+          summary: "Produtos com estoque crítico detectados"
+          description: "Há produtos com estoque abaixo do nível mínimo configurado."
+        labels:
+          severity: warning
+          team: inventory
+
+  # ── Infrastructure ──────────────────────────────────────────────────────────
+  - orgId: 1
+    name: IMS Infrastructure Alerts
+    folder: IMS
+    interval: 1m
+    rules:
+      - uid: ims-disk-memory-critical
+        title: DiskMemoryCritical
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: |
+                (
+                  (1 - (node_filesystem_avail_bytes / node_filesystem_size_bytes)) > 0.85
+                ) or (
+                  (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) > 0.85
+                )
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: "__expr__"
+            model:
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: [A]
+                  reducer:
+                    type: last
+              refId: C
+              type: classic_conditions
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          summary: "Disco ou memória crítico (>85%)"
+          description: "Uso de disco ou memória acima de 85% por mais de 5 minutos."
+        labels:
+          severity: critical
+          team: infra
