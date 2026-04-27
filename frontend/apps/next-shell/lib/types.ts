@@ -33,10 +33,35 @@ export interface IssueDto {
   priority: IssuePriority;
   assigneeId?: string;
   assigneeName?: string;
+  reporterId: string;
   createdAt: string;
-  updatedAt: string;
-  tags: string[];
+  updatedAt?: string;
+  dueDate?: string;
+  resolvedAt?: string;
+  tags: IssueTagDto[];
+  comments: IssueCommentDto[];
+  activities: IssueActivityDto[];
   commentsCount: number;
+}
+
+export interface IssueCommentDto {
+  id: string;
+  content: string;
+  authorId: string;
+  createdAt: string;
+}
+
+export interface IssueActivityDto {
+  id: string;
+  activityType: string;
+  description: string;
+  userId: string;
+  timestamp: string;
+}
+
+export interface IssueTagDto {
+  name: string;
+  color: string;
 }
 
 export interface CreateIssueRequest {
