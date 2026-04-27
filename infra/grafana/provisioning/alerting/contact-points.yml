@@ -1,0 +1,25 @@
+apiVersion: 1
+
+contactPoints:
+  - orgId: 1
+    name: IMS-Slack
+    receivers:
+      - uid: ims-slack-receiver
+        type: slack
+        settings:
+          url: ${GRAFANA_SLACK_WEBHOOK_URL:-https://hooks.slack.com/services/placeholder}
+          channel: "#ims-alerts"
+          title: "🚨 IMS Alert — {{ .CommonLabels.alertname }}"
+          text: "{{ range .Alerts }}*{{ .Annotations.summary }}*\n{{ .Annotations.description }}\n{{ end }}"
+        disableResolveMessage: false
+
+  - orgId: 1
+    name: IMS-Email
+    receivers:
+      - uid: ims-email-receiver
+        type: email
+        settings:
+          addresses: ${GRAFANA_ALERT_EMAIL:-ops@ims.local}
+          subject: "[IMS] {{ .CommonLabels.alertname }}"
+          message: "{{ range .Alerts }}{{ .Annotations.summary }}\n{{ .Annotations.description }}{{ end }}"
+        disableResolveMessage: false
