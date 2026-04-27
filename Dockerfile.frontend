@@ -20,6 +20,12 @@ RUN dotnet publish frontend/apps/blazor-modules \
     -o /blazor-publish \
     --nologo
 
+# US-072: Compress Blazor WASM assets with Brotli (~75% size reduction)
+# Requires brotli tool — install and compress .wasm + .dll files
+RUN apk add --no-cache brotli \
+ && find /blazor-publish/wwwroot -type f \( -name "*.wasm" -o -name "*.dll" -o -name "*.js" \) \
+    -exec brotli --best --force {} \;
+
 # ── 2. Next.js deps (cache layer) ────────────────────────────
 FROM node:20-alpine AS nextjs-deps
 
