@@ -102,6 +102,7 @@ public class IssueEntityTests
         var evt = (IssueStatusChangedEvent)issue.DomainEvents.First();
         evt.OldStatus.Should().Be(IssueStatus.Open);
         evt.NewStatus.Should().Be(IssueStatus.InProgress);
+        issue.ResolvedAt.Should().BeNull();
     }
 
     [Theory]
@@ -117,6 +118,8 @@ public class IssueEntityTests
 
         // Assert
         issue.Status.Should().Be(closingStatus);
+        issue.ResolvedAt.Should().NotBeNull();
+        issue.ResolvedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
     }
 
     // ----------------------------------------------------------------
