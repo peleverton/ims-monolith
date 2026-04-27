@@ -55,8 +55,10 @@ public static class DatabaseExtensions
         => !environment.IsDevelopment();
 
     /// <summary>
-    /// US-065: Aplica migrations (SQLite e PostgreSQL) ou EnsureCreated (InMemory/testes).
-    /// Deve ser chamado no startup em substituição ao GenerateCreateScript manual.
+    /// US-065: Aplica migrations ou EnsureCreated de acordo com o provider:
+    /// - InMemory  → EnsureCreated (testes de integração)
+    /// - SQLite    → EnsureCreated (desenvolvimento local, zero infra)
+    /// - PostgreSQL → MigrateAsync (staging/produção — zero-downtime deploy)
     /// </summary>
     public static async Task ApplyMigrationsAsync<TContext>(this IServiceProvider services)
         where TContext : DbContext
@@ -64,14 +66,17 @@ public static class DatabaseExtensions
         using var scope = services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<TContext>();
 
-        // InMemory: não há migrations — EnsureCreated é suficiente
-        if (db.Database.ProviderName?.Contains("InMemory", StringComparison.OrdinalIgnoreCase) == true)
+        var provider = db.Database.ProviderName ?? "";
+
+        if (provider.Contains("InMemory", StringComparison.OrdinalIgnoreCase) ||
+            provider.Contains("Sqlite", StringComparison.OrdinalIgnoreCase))
         {
+            // Desenvolvimento e testes: EnsureCreated (rápido, sem migrations necessárias)
             await db.Database.EnsureCreatedAsync();
             return;
         }
 
-        // SQLite (desenvolvimento) e PostgreSQL (produção): aplicar migrations versionadas
+        // PostgreSQL (staging/prod): aplicar migrations versionadas
         await db.Database.MigrateAsync();
     }
 }

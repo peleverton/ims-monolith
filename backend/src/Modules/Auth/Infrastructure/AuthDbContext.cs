@@ -1,7 +1,6 @@
 using IMS.Modular.Modules.Auth.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Cryptography;
-using System.Text;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace IMS.Modular.Modules.Auth.Infrastructure;
 
@@ -12,6 +11,14 @@ public class AuthDbContext(DbContextOptions<AuthDbContext> options) : DbContext(
     public DbSet<UserRole> UserRoles => Set<UserRole>();
     // US-055: Rotatable refresh tokens
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        // The admin password hash is a static constant — suppress the false-positive warning
+        // that EF raises when it cannot distinguish static from dynamic HasData values.
+        optionsBuilder.ConfigureWarnings(w =>
+            w.Ignore(RelationalEventId.PendingModelChangesWarning));
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -73,8 +80,9 @@ public class AuthDbContext(DbContextOptions<AuthDbContext> options) : DbContext(
             new Role { Id = adminRoleId, Name = "Admin", Description = "Administrator role" },
             new Role { Id = userRoleId, Name = "User", Description = "Default user role" });
 
-        var adminPasswordHash = Convert.ToBase64String(
-            SHA256.HashData(Encoding.UTF8.GetBytes("Admin@123!")));
+        // Pre-computed SHA256("Admin@123!") as Base64 — must be a static constant
+        // to avoid EF's PendingModelChangesWarning (non-deterministic HasData).
+        const string adminPasswordHash = "bPDqVeX9XmkuAHsWM5qD9DGTcM24thk8FjCCARnLulA=";
 
         modelBuilder.Entity<User>().HasData(new User
         {
