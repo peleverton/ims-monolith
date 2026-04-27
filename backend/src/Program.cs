@@ -1,3 +1,5 @@
+using IMS.Modular.Modules.Features.Api;
+using IMS.Modular.Shared.FeatureFlags;
 using FluentValidation;
 using IMS.Modular.Modules.Analytics;
 using IMS.Modular.Modules.Analytics.Api;
@@ -144,6 +146,9 @@ builder.Services.AddNotificationsModule(builder.Configuration, builder.Environme
 // US-069: Webhooks Module
 builder.Services.AddWebhooksModule(builder.Configuration, builder.Environment);
 
+// US-074: Feature Flags
+builder.Services.AddImsFeatureFlags(builder.Configuration);
+
 // ============================================================
 // HEALTH CHECKS (US-007)
 // ============================================================
@@ -251,6 +256,7 @@ InventoryIssuesModule.Map(app);
 AnalyticsModule.Map(app);
 NotificationsModule.Map(app);
 app.MapWebhooksModule();
+FeaturesModule.Map(app);
 
 // SignalR hub
 app.MapHub<NotificationsHub>("/hubs/notifications").AllowAnonymous();
