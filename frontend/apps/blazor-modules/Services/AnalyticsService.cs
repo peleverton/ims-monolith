@@ -24,9 +24,9 @@ public class AnalyticsService(HttpClient http, IAuthBridgeService auth) : IAnaly
 
         await Task.WhenAll(dashboardTask, byStatusTask, byPriorityTask);
 
-        var dashboard  = dashboardTask.Result;
-        var byStatus   = byStatusTask.Result;
-        var byPriority = byPriorityTask.Result;
+        var dashboard  = await dashboardTask;
+        var byStatus   = await byStatusTask;
+        var byPriority = await byPriorityTask;
 
         if (dashboard is null) return null;
 

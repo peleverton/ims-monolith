@@ -16,13 +16,14 @@ public interface IWebhookRepository
 
 public class WebhookRepository(WebhooksDbContext db) : IWebhookRepository
 {
-    public Task<List<WebhookRegistration>> GetActiveByEventAsync(string eventName, CancellationToken ct) =>
-        db.WebhookRegistrations
-          .Where(r => r.IsActive)
-          .ToListAsync(ct)
-          .ContinueWith(t => t.Result
-              .Where(r => r.ListensTo(eventName))
-              .ToList(), ct);
+    public async Task<List<WebhookRegistration>> GetActiveByEventAsync(string eventName, CancellationToken ct)
+    {
+        var all = await db.WebhookRegistrations
+            .Where(r => r.IsActive)
+            .ToListAsync(ct);
+
+        return all.Where(r => r.ListensTo(eventName)).ToList();
+    }
 
     public Task<List<WebhookRegistration>> GetByOwnerAsync(Guid ownerId, CancellationToken ct) =>
         db.WebhookRegistrations

@@ -51,7 +51,7 @@ public class SearchServiceTests
             Total: 1
         );
 
-        _sut.SearchAsync("bug", new[] { "issues" }, 1, 20).Returns(expected);
+        _sut.SearchAsync("bug", Arg.Any<string[]>(), 1, 20).Returns(expected);
 
         // Act
         var result = await _sut.SearchAsync("bug", new[] { "issues" }, 1, 20);

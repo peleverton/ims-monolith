@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Builder;
+
 namespace IMS.Modular.Tests.Contracts;
 
 /// <summary>
