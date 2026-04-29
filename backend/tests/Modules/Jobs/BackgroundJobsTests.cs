@@ -7,6 +7,7 @@ using IMS.Modular.Modules.Issues.Domain.Entities;
 using IMS.Modular.Modules.Issues.Domain.Enums;
 using IMS.Modular.Modules.Issues.Infrastructure;
 using IMS.Modular.Modules.Jobs;
+using IMS.Modular.Shared.MultiTenancy;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -25,14 +26,14 @@ public class BackgroundJobsTests
     {
         var opts = new DbContextOptionsBuilder<InventoryDbContext>()
             .UseInMemoryDatabase(name).Options;
-        return new InventoryDbContext(opts, _mediator.Object);
+        return new InventoryDbContext(opts, _mediator.Object, Mock.Of<ITenantService>(), Mock.Of<Microsoft.FeatureManagement.IFeatureManager>());
     }
 
     private static IssuesDbContext CreateIssuesDb(string name)
     {
         var opts = new DbContextOptionsBuilder<IssuesDbContext>()
             .UseInMemoryDatabase(name).Options;
-        return new IssuesDbContext(opts, _mediator.Object);
+        return new IssuesDbContext(opts, _mediator.Object, Mock.Of<ITenantService>(), Mock.Of<Microsoft.FeatureManagement.IFeatureManager>());
     }
 
     private static AuthDbContext CreateAuthDb(string name)

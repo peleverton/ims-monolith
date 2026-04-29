@@ -11,8 +11,9 @@ namespace IMS.Modular.Tests.Integration;
 /// Verifies that requests with different X-Tenant-Id headers receive
 /// tenant-scoped data and cannot access other tenants' resources.
 /// </summary>
+[Collection("Integration")]
 public class TenantIsolationIntegrationTests(IntegrationWebAppFactory factory)
-    : IClassFixture<IntegrationWebAppFactory>
+    
 {
     private readonly HttpClient _client = factory.CreateClient(new WebApplicationFactoryClientOptions
     {

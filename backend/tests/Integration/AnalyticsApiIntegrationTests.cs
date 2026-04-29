@@ -10,7 +10,8 @@ namespace IMS.Modular.Tests.Integration;
 /// Validates that analytics endpoints return 200 with valid data after seed.
 /// Uses IntegrationWebAppFactory with isolated SQLite DBs.
 /// </summary>
-public class AnalyticsApiIntegrationTests : IClassFixture<IntegrationWebAppFactory>, IAsyncLifetime
+[Collection("Integration")]
+public class AnalyticsApiIntegrationTests : IAsyncLifetime
 {
     private readonly HttpClient _client;
     private readonly IntegrationWebAppFactory _factory;

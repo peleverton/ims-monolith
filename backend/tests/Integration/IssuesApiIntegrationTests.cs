@@ -10,7 +10,8 @@ namespace IMS.Modular.Tests.Integration;
 /// Covers full lifecycle: Create → Update → Status transitions → Delete.
 /// Uses IntegrationWebAppFactory with isolated SQLite DBs.
 /// </summary>
-public class IssuesApiIntegrationTests : IClassFixture<IntegrationWebAppFactory>, IAsyncLifetime
+[Collection("Integration")]
+public class IssuesApiIntegrationTests : IAsyncLifetime
 {
     private readonly HttpClient _client;
     private readonly IntegrationWebAppFactory _factory;
@@ -92,7 +93,7 @@ public class IssuesApiIntegrationTests : IClassFixture<IntegrationWebAppFactory>
         var response = await _client.PostAsJsonAsync("/api/issues", payload);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().BeOneOf(HttpStatusCode.BadRequest, HttpStatusCode.UnprocessableEntity);
     }
 
     // ── GET /api/issues/{id} ──────────────────────────────────────

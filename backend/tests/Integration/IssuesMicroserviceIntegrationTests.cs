@@ -13,8 +13,9 @@ namespace IMS.Modular.Tests.Integration;
 ///   - Flag OFF  → monolith handles /api/issues
 ///   - Flag ON   → YARP routes to ims-issues-service (tested via mock/stub)
 /// </summary>
+[Collection("Integration")]
 public class IssuesMicroserviceIntegrationTests(IntegrationWebAppFactory factory)
-    : IClassFixture<IntegrationWebAppFactory>
+    
 {
     private readonly HttpClient _client = factory.CreateClient(new WebApplicationFactoryClientOptions
     {
@@ -111,7 +112,7 @@ internal static class AuthHelper
 
         var response = await client.PostAsJsonAsync("/api/auth/login", new
         {
-            email = "admin@ims.local",
+            username = "admin",
             password = "Admin@123!"
         });
 
@@ -119,9 +120,9 @@ internal static class AuthHelper
             return "test-token"; // fallback for isolated unit-style integration tests
 
         var body = await response.Content.ReadFromJsonAsync<TokenResponse>();
-        _cachedToken = body?.Token ?? "test-token";
+        _cachedToken = body?.AccessToken ?? "test-token";
         return _cachedToken;
     }
 
-    private record TokenResponse(string Token);
+    private record TokenResponse(string AccessToken);
 }
