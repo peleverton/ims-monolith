@@ -29,6 +29,7 @@ export function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
   const tAuth = useTranslations("auth.logout");
 
   const navItems = [
+    { href: "/", label: t("dashboard"), icon: LayoutDashboard },
     { href: "/issues", label: t("issues"), icon: AlertCircle },
     { href: "/inventory", label: t("inventory"), icon: Package },
     { href: "/analytics", label: t("analytics"), icon: BarChart3 },
