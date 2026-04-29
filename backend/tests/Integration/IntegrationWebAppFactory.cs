@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using IMS.Modular.Modules.Inventory.Infrastructure;
 using IMS.Modular.Modules.Inventory.Domain.Entities;
@@ -11,6 +13,7 @@ using IMS.Modular.Modules.Auth.Infrastructure;
 using IMS.Modular.Modules.Auth.Domain.Entities;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using IMS.Modular.Modules.InventoryIssues.Infrastructure;
+using IMS.Modular.Modules.Webhooks.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
 using IMS.Modular.Shared.Outbox;
 using Microsoft.Extensions.Configuration;
@@ -19,8 +22,29 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Data;
 using Microsoft.Data.Sqlite;
+using Microsoft.FeatureManagement;
 
 namespace IMS.Modular.Tests.Integration;
+
+/// <summary>
+/// IFeatureManager stub that disables ALL feature flags.
+/// Used in integration tests so TenantAwareDbContext skips tenant filtering,
+/// letting tests query all data without needing a tenant header.
+/// </summary>
+internal sealed class DisabledFeatureManager : IFeatureManager
+{
+    public IAsyncEnumerable<string> GetFeatureNamesAsync() => GetEmpty();
+    private static async IAsyncEnumerable<string> GetEmpty() { await Task.CompletedTask; yield break; }
+    public Task<bool> IsEnabledAsync(string feature) => Task.FromResult(false);
+    public Task<bool> IsEnabledAsync<TContext>(string feature, TContext context) => Task.FromResult(false);
+}
+
+/// <summary>
+/// Shared xUnit collection so all integration tests share ONE IntegrationWebAppFactory instance.
+/// This prevents the race condition from multiple factories being created in parallel.
+/// </summary>
+[CollectionDefinition("Integration")]
+public class IntegrationCollection : ICollectionFixture<IntegrationWebAppFactory> { }
 
 /// <summary>
 /// IDs fixos usados pelo seed de integração — permite que os testes referenciem
@@ -57,11 +81,9 @@ public static class IntegrationSeedData
 public class IntegrationWebAppFactory : WebApplicationFactory<Program>, IDisposable
 {
     private readonly string _tempDir;
-    private readonly string _authConnStr;
-    private readonly string _inventoryConnStr;
-    private readonly string _issuesConnStr;
-    private readonly string _inventoryIssuesConnStr;
+    private readonly string _sharedConnStr;
     private readonly string _outboxConnStr;
+    private readonly string _webhooksConnStr;
 
     static IntegrationWebAppFactory()
     {
@@ -75,11 +97,9 @@ public class IntegrationWebAppFactory : WebApplicationFactory<Program>, IDisposa
         _tempDir = Path.Combine(Path.GetTempPath(), $"ims-test-{Guid.NewGuid():N}");
         Directory.CreateDirectory(_tempDir);
 
-        _authConnStr            = $"Data Source={_tempDir}/auth.db";
-        _inventoryConnStr       = $"Data Source={_tempDir}/inventory.db";
-        _issuesConnStr          = $"Data Source={_tempDir}/issues.db";
-        _inventoryIssuesConnStr = $"Data Source={_tempDir}/inventory-issues.db";
+        _sharedConnStr          = $"Data Source={_tempDir}/shared.db;Cache=Shared";
         _outboxConnStr          = $"Data Source={_tempDir}/outbox.db";
+        _webhooksConnStr        = $"Data Source={_tempDir}/webhooks.db";
     }
 
     /// <summary>Cached admin token obtained once after factory starts.</summary>
@@ -94,7 +114,8 @@ public class IntegrationWebAppFactory : WebApplicationFactory<Program>, IDisposa
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 // Use the Inventory SQLite file for DefaultConnection (used by Dapper)
-                ["ConnectionStrings:DefaultConnection"] = _inventoryConnStr,
+                ["ConnectionStrings:DefaultConnection"] = _sharedConnStr,
+                ["IntegrationTestMode"] = "true",
                 ["ConnectionStrings:Redis"] = "",
                 ["RabbitMQ:Host"] = "",
                 ["Outbox:PollingIntervalSeconds"] = "3600",
@@ -107,15 +128,21 @@ public class IntegrationWebAppFactory : WebApplicationFactory<Program>, IDisposa
 
         builder.ConfigureServices(services =>
         {
-            ReplaceDbContextWithSqlite<AuthDbContext>(services, _authConnStr);
-            ReplaceDbContextWithSqlite<InventoryDbContext>(services, _inventoryConnStr);
-            ReplaceDbContextWithSqlite<IssuesDbContext>(services, _issuesConnStr);
-            ReplaceDbContextWithSqlite<InventoryIssuesDbContext>(services, _inventoryIssuesConnStr);
+            ReplaceDbContextWithSqlite<AuthDbContext>(services, _sharedConnStr);
+            ReplaceDbContextWithSqlite<InventoryDbContext>(services, _sharedConnStr);
+            ReplaceDbContextWithSqlite<IssuesDbContext>(services, _sharedConnStr);
+            ReplaceDbContextWithSqlite<InventoryIssuesDbContext>(services, _sharedConnStr);
             ReplaceDbContextWithSqlite<OutboxDbContext>(services, _outboxConnStr);
+            ReplaceDbContextWithSqlite<WebhooksDbContext>(services, _webhooksConnStr);
 
             // Replace Dapper IDbConnection to use the Inventory SQLite file
             services.RemoveAll<IDbConnection>();
-            services.AddScoped<IDbConnection>(_ => new SqliteConnection(_inventoryConnStr));
+            services.AddScoped<IDbConnection>(_ => new SqliteConnection(_sharedConnStr));
+
+            // US-081: Ensure IFeatureManager is available for TenantAwareDbContext.
+            // Multi-tenancy is disabled in tests — all queries return unrestricted data.
+            services.RemoveAll<IFeatureManager>();
+            services.AddSingleton<IFeatureManager>(new DisabledFeatureManager());
         });
     }
 
@@ -178,9 +205,39 @@ public class IntegrationWebAppFactory : WebApplicationFactory<Program>, IDisposa
 
     private static void SeedAllData(IServiceProvider services)
     {
+        // Ensure all DbContext schemas are created in the shared SQLite file.
+        // EnsureCreated only works for the first context; subsequent contexts
+        // need CreateTables() to create their tables in the existing DB file.
+        EnsureSchemas(services);
         SeedAuthData(services);
         SeedInventoryData(services);
         SeedIssuesData(services);
+    }
+
+    private static void EnsureSchemas(IServiceProvider services)
+    {
+        EnsureSchema<AuthDbContext>(services);
+        EnsureSchema<InventoryDbContext>(services);
+        EnsureSchema<IssuesDbContext>(services);
+        EnsureSchema<InventoryIssuesDbContext>(services);
+        EnsureSchema<OutboxDbContext>(services);
+        EnsureSchema<WebhooksDbContext>(services);
+    }
+
+    private static void EnsureSchema<TContext>(IServiceProvider services) where TContext : DbContext
+    {
+        try
+        {
+            using var scope = services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<TContext>();
+            var creator = db.GetService<IRelationalDatabaseCreator>();
+            creator.EnsureCreated();
+            try { creator.CreateTables(); } catch { /* tables may already exist */ }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[Schema:{typeof(TContext).Name}] {ex.Message}");
+        }
     }
 
     /// <summary>
@@ -237,6 +294,7 @@ public class IntegrationWebAppFactory : WebApplicationFactory<Program>, IDisposa
     /// <summary>
     /// Seed Inventory: 2 locais, 2 fornecedores e 3 produtos com estoque inicial.
     /// Produtos: Laptop (normal), Mouse (ok), Café (abaixo do mínimo → LowStock).
+    /// Always removes any pre-existing data (e.g., demo tenant data) before seeding.
     /// </summary>
     private static void SeedInventoryData(IServiceProvider services)
     {
@@ -246,7 +304,15 @@ public class IntegrationWebAppFactory : WebApplicationFactory<Program>, IDisposa
             var db = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
             db.Database.EnsureCreated();
 
-            if (db.Products.Any()) return;
+            // Remove any demo/pre-existing data to ensure only integration seed is present
+            if (db.Products.Any())
+            {
+                db.StockMovements.RemoveRange(db.StockMovements);
+                db.Products.RemoveRange(db.Products);
+                db.Suppliers.RemoveRange(db.Suppliers);
+                db.Locations.RemoveRange(db.Locations);
+                db.SaveChanges();
+            }
 
             // --- Locais ---
             var warehouse = new Location("Armazém Central", "WH-A",
@@ -302,6 +368,16 @@ public class IntegrationWebAppFactory : WebApplicationFactory<Program>, IDisposa
 
             db.Products.AddRange(laptop, mouse, coffee);
             db.SaveChanges();
+
+            // Explicitly create StockMovement records (AdjustStock only raises domain events)
+            db.StockMovements.AddRange(
+                new StockMovement(laptop.Id, StockMovementType.InitialStock, 20,
+                    IntegrationSeedData.ShelfA1Id),
+                new StockMovement(mouse.Id, StockMovementType.InitialStock, 150,
+                    IntegrationSeedData.ShelfA1Id),
+                new StockMovement(coffee.Id, StockMovementType.InitialStock, 3)
+            );
+            db.SaveChanges();
         }
         catch (Exception ex)
         {
@@ -320,7 +396,12 @@ public class IntegrationWebAppFactory : WebApplicationFactory<Program>, IDisposa
             var db = scope.ServiceProvider.GetRequiredService<IssuesDbContext>();
             db.Database.EnsureCreated();
 
-            if (db.Issues.Any()) return;
+            // Remove any pre-existing data before seeding
+            if (db.Issues.Any())
+            {
+                db.Issues.RemoveRange(db.Issues);
+                db.SaveChanges();
+            }
 
             var bug = new Issue(
                 "Falha ao importar planilha de produtos",

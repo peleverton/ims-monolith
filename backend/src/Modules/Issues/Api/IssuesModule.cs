@@ -29,6 +29,7 @@ public class IssuesModule : IEndpointModule
         group.MapPost("/", Create).WithName("CreateIssue");
         group.MapPut("/{id:guid}", Update).WithName("UpdateIssue");
         group.MapPatch("/{id:guid}/status", UpdateStatus).WithName("UpdateIssueStatus");
+        group.MapPatch("/{id:guid}/resolve", Resolve).WithName("ResolveIssue");
         group.MapPatch("/{id:guid}/assign", Assign).WithName("AssignIssue");
         group.MapPost("/{id:guid}/comments", AddComment).WithName("AddComment");
         group.MapPost("/{id:guid}/tags", AddTag).WithName("AddTag");
@@ -154,6 +155,16 @@ public class IssuesModule : IEndpointModule
         var userId = GetUserId(user);
         var result = await mediator.Send(new ChangeIssueStatusCommand(id, status, userId), ct);
 
+        return result.ToApiResult(httpContext);
+    }
+
+    private static async Task<IResult> Resolve(
+        Guid id, ResolveIssueRequest request,
+        IMediator mediator, ClaimsPrincipal user,
+        HttpContext httpContext, CancellationToken ct)
+    {
+        var userId = GetUserId(user);
+        var result = await mediator.Send(new ChangeIssueStatusCommand(id, IssueStatus.Resolved, userId), ct);
         return result.ToApiResult(httpContext);
     }
 

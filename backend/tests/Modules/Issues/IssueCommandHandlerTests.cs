@@ -4,6 +4,7 @@ using IMS.Modular.Modules.Issues.Application.Handlers;
 using IMS.Modular.Modules.Issues.Domain.Enums;
 using IMS.Modular.Modules.Issues.Infrastructure;
 using IMS.Modular.Shared.Abstractions;
+using IMS.Modular.Shared.MultiTenancy;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -27,7 +28,7 @@ public class IssueCommandHandlerTests : IDisposable
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
 
-        _db = new IssuesDbContext(options, _mediatorMock.Object);
+        _db = new IssuesDbContext(options, _mediatorMock.Object, Mock.Of<ITenantService>(), Mock.Of<Microsoft.FeatureManagement.IFeatureManager>());
 
         // Cache mock: RemoveByPrefixAsync is a no-op in unit tests
         _cacheMock

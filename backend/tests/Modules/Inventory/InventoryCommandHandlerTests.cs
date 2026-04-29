@@ -4,6 +4,7 @@ using IMS.Modular.Modules.Inventory.Application.Handlers;
 using IMS.Modular.Modules.Inventory.Domain.Enums;
 using IMS.Modular.Modules.Inventory.Infrastructure;
 using IMS.Modular.Shared.Abstractions;
+using IMS.Modular.Shared.MultiTenancy;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -26,7 +27,7 @@ public class InventoryCommandHandlerTests : IDisposable
         var options = new DbContextOptionsBuilder<InventoryDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
-        _db = new InventoryDbContext(options, _mediator.Object);
+        _db = new InventoryDbContext(options, _mediator.Object, Mock.Of<ITenantService>(), Mock.Of<Microsoft.FeatureManagement.IFeatureManager>());
 
         // Cache mock: all operations are no-ops in unit tests
         _cache.Setup(c => c.RemoveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))

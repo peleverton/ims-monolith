@@ -16,7 +16,8 @@ namespace IMS.Modular.Tests.Integration;
 /// Integration tests for Inventory API endpoints.
 /// Uses WebApplicationFactory with in-memory DB for isolation.
 /// </summary>
-public class InventoryApiIntegrationTests : IClassFixture<IntegrationWebAppFactory>, IAsyncLifetime
+[Collection("Integration")]
+public class InventoryApiIntegrationTests : IAsyncLifetime
 {
     private readonly HttpClient _client;
     private readonly IntegrationWebAppFactory _factory;

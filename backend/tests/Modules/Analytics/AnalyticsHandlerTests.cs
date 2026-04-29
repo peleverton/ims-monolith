@@ -69,8 +69,8 @@ public class AnalyticsHandlerTests
         // Arrange
         IReadOnlyList<IssueStatsByStatusDto> expected = new List<IssueStatsByStatusDto>
         {
-            new("Open", 5, 50.0),
-            new("Closed", 5, 50.0)
+            new() { Status = "Open", Count = 5, Percentage = 50.0 },
+            new() { Status = "Closed", Count = 5, Percentage = 50.0 }
         };
         _repoMock.Setup(r => r.GetIssueStatsByStatusAsync(It.IsAny<CancellationToken>()))
                  .ReturnsAsync(expected);
@@ -96,8 +96,8 @@ public class AnalyticsHandlerTests
         // Arrange
         IReadOnlyList<IssueStatsByPriorityDto> expected = new List<IssueStatsByPriorityDto>
         {
-            new("High", 4, 40.0),
-            new("Medium", 6, 60.0)
+            new() { Priority = "High", Count = 4, Percentage = 40.0 },
+            new() { Priority = "Medium", Count = 6, Percentage = 60.0 }
         };
         _repoMock.Setup(r => r.GetIssueStatsByPriorityAsync(It.IsAny<CancellationToken>()))
                  .ReturnsAsync(expected);
@@ -125,11 +125,11 @@ public class AnalyticsHandlerTests
         var inventorySummary = new InventorySummaryDto(100, 90, 5, 5, 0, 0, 1000m);
         IReadOnlyList<IssueTrendDto> trends = new List<IssueTrendDto>
         {
-            new("2025-01-01", 3, 1, 0)
+            new() { Date = "2025-01-01", Created = 3, Resolved = 1, Closed = 0 }
         };
         IReadOnlyList<UserWorkloadSummaryDto> workload = new List<UserWorkloadSummaryDto>
         {
-            new(Guid.NewGuid(), 10, 3, 2, 4, 1, 0)
+            new() { UserId = Guid.NewGuid(), TotalAssigned = 10, Open = 3, InProgress = 2, Resolved = 4, Closed = 1, Overdue = 0 }
         };
 
         _repoMock.Setup(r => r.GetIssueSummaryAsync(It.IsAny<CancellationToken>())).ReturnsAsync(issueSummary);
@@ -161,8 +161,8 @@ public class AnalyticsHandlerTests
         // Arrange
         IReadOnlyList<IssueTrendDto> expected = new List<IssueTrendDto>
         {
-            new("2025-01-01", 2, 1, 0),
-            new("2025-01-02", 1, 2, 1)
+            new() { Date = "2025-01-01", Created = 2, Resolved = 1, Closed = 0 },
+            new() { Date = "2025-01-02", Created = 1, Resolved = 2, Closed = 1 }
         };
         _repoMock.Setup(r => r.GetIssueTrendsAsync(30, It.IsAny<CancellationToken>()))
                  .ReturnsAsync(expected);
@@ -188,7 +188,7 @@ public class AnalyticsHandlerTests
         var userId = Guid.NewGuid();
         IReadOnlyList<UserWorkloadSummaryDto> expected = new List<UserWorkloadSummaryDto>
         {
-            new(userId, 8, 3, 2, 2, 1, 1)
+            new() { UserId = userId, TotalAssigned = 8, Open = 3, InProgress = 2, Resolved = 2, Closed = 1, Overdue = 1 }
         };
         _repoMock.Setup(r => r.GetAllUsersWorkloadAsync(It.IsAny<CancellationToken>()))
                  .ReturnsAsync(expected);

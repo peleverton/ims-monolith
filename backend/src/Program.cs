@@ -1,3 +1,5 @@
+using IMS.Modular.Modules.UserManagement;
+using IMS.Modular.Modules.UserManagement.Api;
 using IMS.Modular.Shared.FeatureFlags;
 using FluentValidation;
 using IMS.Modular.Modules.Analytics;
@@ -140,6 +142,8 @@ builder.Services.AddImsOutbox(builder.Configuration);
 // ============================================================
 
 builder.Services.AddAuthModule(builder.Configuration);
+// US-064: UserManagement module — must come after AddAuthModule (shares AuthDbContext)
+builder.Services.AddUserManagementModule();
 builder.Services.AddIssuesModule(builder.Configuration);
 builder.Services.AddInventoryModule(builder.Configuration);
 builder.Services.AddInventoryIssuesModule(builder.Configuration);
@@ -266,6 +270,9 @@ app.MapGet("/api/status", () => Results.Ok(new
 // ============================================================
 
 AuthModule.Map(app);
+// US-064: New UserManagement module at /api/users (replaces /api/admin/users)
+UserManagementModule.Map(app);
+// Kept for backward compatibility — deprecated, will be removed in Sprint 14
 UserAdminModule.Map(app);
 IssuesModule.Map(app);
 InventoryModule.Map(app);

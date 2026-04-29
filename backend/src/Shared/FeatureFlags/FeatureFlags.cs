@@ -9,4 +9,6 @@ public static class FeatureFlags
     public const string EnableKanbanView      = nameof(EnableKanbanView);
     public const string EnableWebhooks        = nameof(EnableWebhooks);
     public const string EnableFullTextSearch  = nameof(EnableFullTextSearch);
+    /// <summary>US-081: Enables row-level multi-tenancy enforcement via TenantId query filters.</summary>
+    public const string EnableMultiTenancy    = nameof(EnableMultiTenancy);
 }

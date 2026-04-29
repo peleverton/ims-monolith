@@ -10,7 +10,8 @@ namespace IMS.Modular.Tests.Integration;
 /// Cobrem GET por ID, listagens filtradas e comportamentos de domínio
 /// (ex: produto com estoque abaixo do mínimo aparece como LowStock).
 /// </summary>
-public class InventorySeededDataTests : IClassFixture<IntegrationWebAppFactory>, IAsyncLifetime
+[Collection("Integration")]
+public class InventorySeededDataTests : IAsyncLifetime
 {
     private readonly HttpClient _client;
     private readonly IntegrationWebAppFactory _factory;

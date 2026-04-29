@@ -69,6 +69,10 @@ namespace IMS.Modular.Modules.Inventory.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("TenantId")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasMaxLength(30)
@@ -85,6 +89,8 @@ namespace IMS.Modular.Modules.Inventory.Infrastructure.Migrations
                     b.HasIndex("IsActive");
 
                     b.HasIndex("ParentLocationId");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("Type");
 
@@ -158,6 +164,10 @@ namespace IMS.Modular.Modules.Inventory.Infrastructure.Migrations
                     b.Property<Guid?>("SupplierId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("TenantId")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Unit")
                         .IsRequired()
                         .HasMaxLength(10)
@@ -184,6 +194,8 @@ namespace IMS.Modular.Modules.Inventory.Infrastructure.Migrations
                     b.HasIndex("StockStatus");
 
                     b.HasIndex("SupplierId");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("Products", (string)null);
                 });
@@ -222,6 +234,10 @@ namespace IMS.Modular.Modules.Inventory.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("TenantId")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("TEXT");
 
@@ -234,6 +250,8 @@ namespace IMS.Modular.Modules.Inventory.Infrastructure.Migrations
                     b.HasIndex("MovementType");
 
                     b.HasIndex("ProductId");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("StockMovements", (string)null);
                 });
@@ -307,6 +325,10 @@ namespace IMS.Modular.Modules.Inventory.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("TenantId")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("TEXT");
 
@@ -316,6 +338,8 @@ namespace IMS.Modular.Modules.Inventory.Infrastructure.Migrations
                         .IsUnique();
 
                     b.HasIndex("IsActive");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("Suppliers", (string)null);
                 });

@@ -50,6 +50,9 @@ public record UpdateIssueRequest(
 public record UpdateStatusRequest(
     string Status);
 
+public record ResolveIssueRequest(
+    string? ResolutionNotes = null);
+
 public record AssignIssueRequest(
     Guid AssigneeId);
 

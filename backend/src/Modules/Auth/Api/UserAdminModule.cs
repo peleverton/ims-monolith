@@ -10,7 +10,10 @@ namespace IMS.Modular.Modules.Auth.Api;
 /// <summary>
 /// US-040 — Admin endpoints para gerenciamento de usuários.
 /// Requer role Admin.
+/// ⚠️ DEPRECATED (US-064): Use /api/users instead.
+/// Mantido por compatibilidade retroativa até Sprint 14.
 /// </summary>
+[Obsolete("Deprecated in US-064. Use UserManagementModule at /api/users instead.")]
 public class UserAdminModule : IEndpointModule
 {
     public static IEndpointRouteBuilder Map(IEndpointRouteBuilder endpoints)

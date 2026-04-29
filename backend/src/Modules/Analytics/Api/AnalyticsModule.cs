@@ -73,6 +73,12 @@ public class AnalyticsModule : IEndpointModule
         group.MapGet("/workload", GetAllUsersWorkload).WithName("GetAllUsersWorkload");
         group.MapGet("/workload/{userId:guid}", GetUserWorkload).WithName("GetUserWorkload");
         group.MapGet("/{userId:guid}/statistics", GetUserStatistics).WithName("GetUserStatistics");
+
+        // Alias for backward-compat: /api/analytics/workload
+        endpoints.MapGet("/api/analytics/workload",
+            (IMediator mediator, CancellationToken ct) => GetAllUsersWorkload(mediator, ct))
+            .WithTags("Analytics - Users")
+            .RequireAuthorization(Policies.CanViewAnalytics);
     }
 
     private static async Task<IResult> GetAllUsersWorkload(IMediator mediator, CancellationToken ct)
@@ -131,7 +137,7 @@ public class AnalyticsModule : IEndpointModule
     private static void MapInventoryAnalytics(IEndpointRouteBuilder endpoints)
     {
         var group = endpoints
-            .MapGroup("/api/inventory/analytics")
+            .MapGroup("/api/analytics/inventory")
             .WithTags("Analytics - Inventory")
             .RequireAuthorization(Policies.CanViewAnalytics);
 
