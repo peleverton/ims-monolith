@@ -1,4 +1,5 @@
 using MediatR;
+using IMS.Modular.Shared.MultiTenancy;
 
 namespace IMS.Modular.Shared.Domain;
 
@@ -14,11 +15,18 @@ public abstract class DomainEventBase : IDomainEvent
     public DateTime OccurredOn { get; } = DateTime.UtcNow;
 }
 
-public abstract class BaseEntity
+/// <summary>
+/// US-081: BaseEntity now carries TenantId for multi-tenancy Phase 2.
+/// All entities automatically get tenant isolation via global query filters.
+/// </summary>
+public abstract class BaseEntity : ITenantEntity
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
+
+    /// <summary>US-081: Tenant identifier for row-level isolation.</summary>
+    public string? TenantId { get; set; }
 
     private readonly List<IDomainEvent> _domainEvents = [];
     public IReadOnlyCollection<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();

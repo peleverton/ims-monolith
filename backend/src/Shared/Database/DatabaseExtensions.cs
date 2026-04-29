@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace IMS.Modular.Shared.Database;
 
@@ -71,8 +73,23 @@ public static class DatabaseExtensions
         if (provider.Contains("InMemory", StringComparison.OrdinalIgnoreCase) ||
             provider.Contains("Sqlite", StringComparison.OrdinalIgnoreCase))
         {
-            // Desenvolvimento e testes: EnsureCreated (rápido, sem migrations necessárias)
-            await db.Database.EnsureCreatedAsync();
+            // Desenvolvimento e testes: EnsureCreated (rápido, sem migrations necessárias).
+            // When sharing one SQLite file across multiple DbContexts, EnsureCreated is
+            // a no-op for the second+ context because the file already exists.
+            // CreateTables ensures THIS context's tables are created even when the DB file exists.
+            var created = await db.Database.EnsureCreatedAsync();
+            if (!created)
+            {
+                // DB file already exists — ensure this context's tables exist too.
+                try
+                {
+                    var creator = (IRelationalDatabaseCreator)db.Database
+                        .GetInfrastructure()
+                        .GetRequiredService(typeof(IDatabaseCreator));
+                    await creator.CreateTablesAsync();
+                }
+                catch { /* Tables may already exist; ignore "already exists" errors */ }
+            }
             return;
         }
 

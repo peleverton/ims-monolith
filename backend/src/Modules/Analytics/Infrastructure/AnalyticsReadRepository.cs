@@ -57,8 +57,8 @@ public class AnalyticsReadRepository(IDbConnection connection) : IAnalyticsReadR
                 SUM(CASE WHEN "Status" = 'Testing'     THEN 1 ELSE 0 END)                                        AS Testing,
                 SUM(CASE WHEN "Status" = 'Resolved'    THEN 1 ELSE 0 END)                                        AS Resolved,
                 SUM(CASE WHEN "Status" = 'Closed'      THEN 1 ELSE 0 END)                                        AS Closed,
-                SUM(CASE WHEN "DueDate" < NOW() AND "Status" NOT IN ('Resolved','Closed') THEN 1 ELSE 0 END)      AS Overdue,
-                SUM(CASE WHEN "DueDate"::date = CURRENT_DATE AND "Status" NOT IN ('Resolved','Closed') THEN 1 ELSE 0 END) AS DueToday
+                SUM(CASE WHEN "DueDate" < datetime('now') AND "Status" NOT IN ('Resolved','Closed') THEN 1 ELSE 0 END) AS Overdue,
+                SUM(CASE WHEN date("DueDate") = date('now') AND "Status" NOT IN ('Resolved','Closed') THEN 1 ELSE 0 END) AS DueToday
             FROM "Issues"
             """;
         var row = await connection.QuerySingleAsync<dynamic>(sql);
@@ -70,18 +70,18 @@ public class AnalyticsReadRepository(IDbConnection connection) : IAnalyticsReadR
 
     public async Task<IReadOnlyList<IssueTrendDto>> GetIssueTrendsAsync(int days, CancellationToken ct = default)
     {
-        const string sql = """
+        var sql = $"""
             SELECT
-                TO_CHAR("CreatedAt"::date, 'YYYY-MM-DD')                        AS "Date",
-                COUNT(*)::int                                                    AS "Created",
-                SUM(CASE WHEN "Status" = 'Resolved' THEN 1 ELSE 0 END)::int     AS "Resolved",
-                SUM(CASE WHEN "Status" = 'Closed'   THEN 1 ELSE 0 END)::int     AS "Closed"
+                strftime('%Y-%m-%d', "CreatedAt")                        AS "Date",
+                COUNT(*)                                                  AS "Created",
+                SUM(CASE WHEN "Status" = 'Resolved' THEN 1 ELSE 0 END)  AS "Resolved",
+                SUM(CASE WHEN "Status" = 'Closed'   THEN 1 ELSE 0 END)  AS "Closed"
             FROM "Issues"
-            WHERE "CreatedAt" >= NOW() - (@Days::int * INTERVAL '1 day')
-            GROUP BY "CreatedAt"::date
+            WHERE "CreatedAt" >= datetime('now', '-{days} days')
+            GROUP BY strftime('%Y-%m-%d', "CreatedAt")
             ORDER BY "Date" ASC
             """;
-        var rows = await connection.QueryAsync<IssueTrendDto>(sql, new { Days = days });
+        var rows = await connection.QueryAsync<IssueTrendDto>(sql);
         return rows.AsList();
     }
 
@@ -90,10 +90,10 @@ public class AnalyticsReadRepository(IDbConnection connection) : IAnalyticsReadR
         const string sql = """
             SELECT
                 "Priority",
-                AVG(EXTRACT(EPOCH FROM ("UpdatedAt" - "CreatedAt")) / 3600.0)::float8  AS "AvgResolutionHours",
-                MIN(EXTRACT(EPOCH FROM ("UpdatedAt" - "CreatedAt")) / 3600.0)::float8  AS "MinResolutionHours",
-                MAX(EXTRACT(EPOCH FROM ("UpdatedAt" - "CreatedAt")) / 3600.0)::float8  AS "MaxResolutionHours",
-                COUNT(*)::int                                                            AS "SampleSize"
+                AVG((julianday("UpdatedAt") - julianday("CreatedAt")) * 24.0)  AS "AvgResolutionHours",
+                MIN((julianday("UpdatedAt") - julianday("CreatedAt")) * 24.0)  AS "MinResolutionHours",
+                MAX((julianday("UpdatedAt") - julianday("CreatedAt")) * 24.0)  AS "MaxResolutionHours",
+                COUNT(*)                                                        AS "SampleSize"
             FROM "Issues"
             WHERE "Status" IN ('Resolved', 'Closed') AND "UpdatedAt" IS NOT NULL
             GROUP BY "Priority"
@@ -107,8 +107,8 @@ public class AnalyticsReadRepository(IDbConnection connection) : IAnalyticsReadR
         const string sql = """
             SELECT
                 "Status",
-                COUNT(*)::int                                               AS "Count",
-                ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 2)::float8  AS "Percentage"
+                COUNT(*) AS "Count",
+                ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM "Issues"), 2) AS "Percentage"
             FROM "Issues"
             GROUP BY "Status"
             ORDER BY "Count" DESC
@@ -121,8 +121,8 @@ public class AnalyticsReadRepository(IDbConnection connection) : IAnalyticsReadR
         const string sql = """
             SELECT
                 "Priority",
-                COUNT(*)::int                                               AS "Count",
-                ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 2)::float8  AS "Percentage"
+                COUNT(*) AS "Count",
+                ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM "Issues"), 2) AS "Percentage"
             FROM "Issues"
             GROUP BY "Priority"
             ORDER BY "Count" DESC
@@ -135,11 +135,11 @@ public class AnalyticsReadRepository(IDbConnection connection) : IAnalyticsReadR
         const string sql = """
             SELECT
                 "AssigneeId",
-                SUM(CASE WHEN "Status" = 'Open'       THEN 1 ELSE 0 END)::int AS "Open",
-                SUM(CASE WHEN "Status" = 'InProgress' THEN 1 ELSE 0 END)::int AS "InProgress",
-                SUM(CASE WHEN "Status" = 'Resolved'   THEN 1 ELSE 0 END)::int AS "Resolved",
-                SUM(CASE WHEN "Status" = 'Closed'     THEN 1 ELSE 0 END)::int AS "Closed",
-                COUNT(*)::int AS "Total"
+                SUM(CASE WHEN "Status" = 'Open'       THEN 1 ELSE 0 END) AS "Open",
+                SUM(CASE WHEN "Status" = 'InProgress' THEN 1 ELSE 0 END) AS "InProgress",
+                SUM(CASE WHEN "Status" = 'Resolved'   THEN 1 ELSE 0 END) AS "Resolved",
+                SUM(CASE WHEN "Status" = 'Closed'     THEN 1 ELSE 0 END) AS "Closed",
+                COUNT(*) AS "Total"
             FROM "Issues"
             WHERE "AssigneeId" IS NOT NULL
             GROUP BY "AssigneeId"
@@ -153,10 +153,10 @@ public class AnalyticsReadRepository(IDbConnection connection) : IAnalyticsReadR
         const string sql = """
             SELECT
                 "AssigneeId" AS "UserId",
-                COUNT(CASE WHEN "Status" IN ('Open','InProgress') THEN 1 END)::int        AS "CurrentLoad",
-                COUNT(CASE WHEN "Status" IN ('Resolved','Closed') THEN 1 END)::int        AS "Resolved",
+                SUM(CASE WHEN "Status" IN ('Open','InProgress') THEN 1 ELSE 0 END)     AS "CurrentLoad",
+                SUM(CASE WHEN "Status" IN ('Resolved','Closed') THEN 1 ELSE 0 END)     AS "Resolved",
                 AVG(CASE WHEN "Status" IN ('Resolved','Closed') AND "UpdatedAt" IS NOT NULL
-                    THEN EXTRACT(EPOCH FROM ("UpdatedAt" - "CreatedAt")) / 3600.0 END)::float8 AS "AvgResolutionHours"
+                    THEN (julianday("UpdatedAt") - julianday("CreatedAt")) * 24.0 END) AS "AvgResolutionHours"
             FROM "Issues"
             WHERE "AssigneeId" IS NOT NULL
             GROUP BY "AssigneeId"
@@ -173,12 +173,12 @@ public class AnalyticsReadRepository(IDbConnection connection) : IAnalyticsReadR
         const string sql = """
             SELECT
                 "AssigneeId" AS "UserId",
-                COUNT(*)::int AS "TotalAssigned",
-                SUM(CASE WHEN "Status" = 'Open'       THEN 1 ELSE 0 END)::int AS "Open",
-                SUM(CASE WHEN "Status" = 'InProgress' THEN 1 ELSE 0 END)::int AS "InProgress",
-                SUM(CASE WHEN "Status" = 'Resolved'   THEN 1 ELSE 0 END)::int AS "Resolved",
-                SUM(CASE WHEN "Status" = 'Closed'     THEN 1 ELSE 0 END)::int AS "Closed",
-                SUM(CASE WHEN "DueDate" < NOW() AND "Status" NOT IN ('Resolved','Closed') THEN 1 ELSE 0 END)::int AS "Overdue"
+                COUNT(*) AS "TotalAssigned",
+                SUM(CASE WHEN "Status" = 'Open'       THEN 1 ELSE 0 END) AS "Open",
+                SUM(CASE WHEN "Status" = 'InProgress' THEN 1 ELSE 0 END) AS "InProgress",
+                SUM(CASE WHEN "Status" = 'Resolved'   THEN 1 ELSE 0 END) AS "Resolved",
+                SUM(CASE WHEN "Status" = 'Closed'     THEN 1 ELSE 0 END) AS "Closed",
+                SUM(CASE WHEN "DueDate" < datetime('now') AND "Status" NOT IN ('Resolved','Closed') THEN 1 ELSE 0 END) AS "Overdue"
             FROM "Issues"
             WHERE "AssigneeId" IS NOT NULL
             GROUP BY "AssigneeId"
@@ -192,17 +192,17 @@ public class AnalyticsReadRepository(IDbConnection connection) : IAnalyticsReadR
         const string sql = """
             SELECT
                 "AssigneeId" AS "UserId",
-                COUNT(*)::int AS "TotalAssigned",
-                SUM(CASE WHEN "Status" = 'Open'       THEN 1 ELSE 0 END)::int AS "Open",
-                SUM(CASE WHEN "Status" = 'InProgress' THEN 1 ELSE 0 END)::int AS "InProgress",
-                SUM(CASE WHEN "Status" = 'Resolved'   THEN 1 ELSE 0 END)::int AS "Resolved",
-                SUM(CASE WHEN "Status" = 'Closed'     THEN 1 ELSE 0 END)::int AS "Closed",
-                SUM(CASE WHEN "DueDate" < NOW() AND "Status" NOT IN ('Resolved','Closed') THEN 1 ELSE 0 END)::int AS "Overdue",
+                COUNT(*) AS "TotalAssigned",
+                SUM(CASE WHEN "Status" = 'Open'       THEN 1 ELSE 0 END) AS "Open",
+                SUM(CASE WHEN "Status" = 'InProgress' THEN 1 ELSE 0 END) AS "InProgress",
+                SUM(CASE WHEN "Status" = 'Resolved'   THEN 1 ELSE 0 END) AS "Resolved",
+                SUM(CASE WHEN "Status" = 'Closed'     THEN 1 ELSE 0 END) AS "Closed",
+                SUM(CASE WHEN "DueDate" < datetime('now') AND "Status" NOT IN ('Resolved','Closed') THEN 1 ELSE 0 END) AS "Overdue",
                 AVG(CASE WHEN "Status" IN ('Resolved','Closed') AND "UpdatedAt" IS NOT NULL
-                    THEN EXTRACT(EPOCH FROM ("UpdatedAt" - "CreatedAt")) / 3600.0 END)::float8 AS "AvgResolutionHours",
-                ROUND(COUNT(CASE WHEN "Status" IN ('Resolved','Closed') THEN 1 END) * 100.0 / COUNT(*), 2)::float8 AS "CompletionRate"
+                    THEN (julianday("UpdatedAt") - julianday("CreatedAt")) * 24.0 END) AS "AvgResolutionHours",
+                ROUND(SUM(CASE WHEN "Status" IN ('Resolved','Closed') THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) AS "CompletionRate"
             FROM "Issues"
-            WHERE UPPER("AssigneeId"::text) = @UserId
+            WHERE UPPER(CAST("AssigneeId" AS TEXT)) = @UserId
             GROUP BY "AssigneeId"
             """;
         return await connection.QuerySingleOrDefaultAsync<UserWorkloadDetailDto>(sql, new { UserId = GH.Up(userId) });
@@ -213,13 +213,13 @@ public class AnalyticsReadRepository(IDbConnection connection) : IAnalyticsReadR
         const string sql = """
             SELECT
                 "AssigneeId" AS "UserId",
-                COUNT(CASE WHEN "Status" IN ('Resolved','Closed') THEN 1 END)::int AS "TotalResolved",
+                SUM(CASE WHEN "Status" IN ('Resolved','Closed') THEN 1 ELSE 0 END) AS "TotalResolved",
                 AVG(CASE WHEN "Status" IN ('Resolved','Closed') AND "UpdatedAt" IS NOT NULL
-                    THEN EXTRACT(EPOCH FROM ("UpdatedAt" - "CreatedAt")) / 3600.0 END)::float8 AS "AvgResolutionHours",
-                ROUND(COUNT(CASE WHEN "Status" IN ('Resolved','Closed') THEN 1 END) * 100.0 / COUNT(*), 2)::float8 AS "CompletionRate",
-                COUNT(CASE WHEN "Status" IN ('Open','InProgress') THEN 1 END)::int AS "CurrentLoad"
+                    THEN (julianday("UpdatedAt") - julianday("CreatedAt")) * 24.0 END) AS "AvgResolutionHours",
+                ROUND(SUM(CASE WHEN "Status" IN ('Resolved','Closed') THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) AS "CompletionRate",
+                SUM(CASE WHEN "Status" IN ('Open','InProgress') THEN 1 ELSE 0 END) AS "CurrentLoad"
             FROM "Issues"
-            WHERE UPPER("AssigneeId"::text) = @UserId
+            WHERE UPPER(CAST("AssigneeId" AS TEXT)) = @UserId
             GROUP BY "AssigneeId"
             """;
         return await connection.QuerySingleOrDefaultAsync<UserStatisticsDto>(sql, new { UserId = GH.Up(userId) });
@@ -233,7 +233,7 @@ public class AnalyticsReadRepository(IDbConnection connection) : IAnalyticsReadR
             SELECT
                 SUM("CurrentStock" * "UnitPrice") AS TotalValue,
                 SUM("CurrentStock" * "CostPrice") AS TotalCostValue
-            FROM "Products" WHERE "IsActive" = true
+            FROM "Products" WHERE "IsActive" = 1
             """;
         var total = await connection.QuerySingleAsync<dynamic>(totalSql);
 
@@ -243,7 +243,7 @@ public class AnalyticsReadRepository(IDbConnection connection) : IAnalyticsReadR
                 COUNT(*) AS ProductCount,
                 SUM("CurrentStock" * "UnitPrice") AS TotalValue,
                 SUM("CurrentStock" * "CostPrice") AS TotalCostValue
-            FROM "Products" WHERE "IsActive" = true
+            FROM "Products" WHERE "IsActive" = 1
             GROUP BY "Category" ORDER BY TotalValue DESC
             """;
         var byCategory = (await connection.QueryAsync<CategoryValueDto>(byCatSql)).AsList();
@@ -255,8 +255,8 @@ public class AnalyticsReadRepository(IDbConnection connection) : IAnalyticsReadR
                 COUNT(*) AS ProductCount,
                 SUM(p."CurrentStock" * p."UnitPrice") AS TotalValue
             FROM "Products" p
-            LEFT JOIN "Locations" l ON l."Id"::text = p."LocationId"::text
-            WHERE p."IsActive" = true
+            LEFT JOIN "Locations" l ON UPPER(CAST(l."Id" AS TEXT)) = UPPER(CAST(p."LocationId" AS TEXT))
+            WHERE p."IsActive" = 1
             GROUP BY p."LocationId", l."Name" ORDER BY TotalValue DESC
             """;
         var byLocation = (await connection.QueryAsync<LocationValueDto>(byLocSql)).AsList();
@@ -272,13 +272,13 @@ public class AnalyticsReadRepository(IDbConnection connection) : IAnalyticsReadR
     {
         const string sql = """
             SELECT
-                COUNT(*)                                                                       AS TotalProducts,
-                SUM(CASE WHEN "IsActive" = true AND "StockStatus" != 'Discontinued' THEN 1 ELSE 0 END) AS ActiveProducts,
-                SUM(CASE WHEN "StockStatus" = 'Discontinued' THEN 1 ELSE 0 END)               AS DiscontinuedProducts,
-                SUM(CASE WHEN "StockStatus" = 'LowStock'     THEN 1 ELSE 0 END)               AS LowStockProducts,
-                SUM(CASE WHEN "StockStatus" = 'OutOfStock'   THEN 1 ELSE 0 END)               AS OutOfStockProducts,
-                SUM(CASE WHEN "StockStatus" = 'Overstock'    THEN 1 ELSE 0 END)               AS OverstockProducts,
-                SUM("CurrentStock" * "UnitPrice")                                              AS TotalInventoryValue
+                COUNT(*) AS TotalProducts,
+                SUM(CASE WHEN "IsActive" = 1 AND "StockStatus" != 'Discontinued' THEN 1 ELSE 0 END) AS ActiveProducts,
+                SUM(CASE WHEN "StockStatus" = 'Discontinued' THEN 1 ELSE 0 END) AS DiscontinuedProducts,
+                SUM(CASE WHEN "StockStatus" = 'LowStock'     THEN 1 ELSE 0 END) AS LowStockProducts,
+                SUM(CASE WHEN "StockStatus" = 'OutOfStock'   THEN 1 ELSE 0 END) AS OutOfStockProducts,
+                SUM(CASE WHEN "StockStatus" = 'Overstock'    THEN 1 ELSE 0 END) AS OverstockProducts,
+                SUM("CurrentStock" * "UnitPrice") AS TotalInventoryValue
             FROM "Products"
             """;
         var row = await connection.QuerySingleAsync<dynamic>(sql);
@@ -297,8 +297,8 @@ public class AnalyticsReadRepository(IDbConnection connection) : IAnalyticsReadR
         const string sql = """
             SELECT
                 "StockStatus" AS "Status",
-                COUNT(*)::int AS "Count",
-                ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 2)::float8 AS "Percentage"
+                COUNT(*) AS "Count",
+                ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM "Products"), 2) AS "Percentage"
             FROM "Products"
             GROUP BY "StockStatus" ORDER BY "Count" DESC
             """;
@@ -307,19 +307,19 @@ public class AnalyticsReadRepository(IDbConnection connection) : IAnalyticsReadR
 
     public async Task<IReadOnlyList<StockTrendDto>> GetStockTrendsAsync(int days, CancellationToken ct = default)
     {
-        const string sql = """
+        var sql = $"""
             SELECT
-                TO_CHAR("MovementDate"::date, 'YYYY-MM-DD') AS Date,
+                strftime('%Y-%m-%d', "MovementDate") AS Date,
                 SUM(CASE WHEN "MovementType" IN ('StockIn','Purchase','InitialStock','Return') THEN "Quantity" ELSE 0 END) AS TotalIn,
                 SUM(CASE WHEN "MovementType" IN ('StockOut','Sale','Damage','Loss','Expired')  THEN "Quantity" ELSE 0 END) AS TotalOut,
                 SUM(CASE WHEN "MovementType" IN ('StockIn','Purchase','InitialStock','Return') THEN "Quantity" ELSE 0 END) -
                 SUM(CASE WHEN "MovementType" IN ('StockOut','Sale','Damage','Loss','Expired')  THEN "Quantity" ELSE 0 END) AS NetChange
             FROM "StockMovements"
-            WHERE "MovementDate" >= NOW() - (@Days::int * INTERVAL '1 day')
-            GROUP BY "MovementDate"::date
+            WHERE "MovementDate" >= datetime('now', '-{days} days')
+            GROUP BY strftime('%Y-%m-%d', "MovementDate")
             ORDER BY Date ASC
             """;
-        return (await connection.QueryAsync<StockTrendDto>(sql, new { Days = days })).AsList();
+        return (await connection.QueryAsync<StockTrendDto>(sql)).AsList();
     }
 
     public async Task<IReadOnlyList<CategoryDistributionDto>> GetCategoryDistributionAsync(CancellationToken ct = default)
@@ -327,8 +327,8 @@ public class AnalyticsReadRepository(IDbConnection connection) : IAnalyticsReadR
         const string sql = """
             SELECT
                 "Category",
-                COUNT(*)::int AS "Count",
-                ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 2)::float8 AS "Percentage"
+                COUNT(*) AS "Count",
+                ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM "Products"), 2) AS "Percentage"
             FROM "Products"
             GROUP BY "Category" ORDER BY "Count" DESC
             """;
@@ -343,10 +343,10 @@ public class AnalyticsReadRepository(IDbConnection connection) : IAnalyticsReadR
                 COUNT(sm."Id") AS TotalMovements,
                 SUM(CASE WHEN sm."MovementType" IN ('StockOut','Sale','Damage','Loss','Expired') THEN sm."Quantity" ELSE 0 END) AS TotalOut,
                 ROUND(
-                    CAST(SUM(CASE WHEN sm."MovementType" IN ('StockOut','Sale','Damage','Loss','Expired') THEN sm."Quantity" ELSE 0 END) AS numeric)
+                    CAST(SUM(CASE WHEN sm."MovementType" IN ('StockOut','Sale','Damage','Loss','Expired') THEN sm."Quantity" ELSE 0 END) AS REAL)
                     / NULLIF(AVG(p."CurrentStock"), 0), 4) AS TurnoverRate
             FROM "Products" p
-            LEFT JOIN "StockMovements" sm ON sm."ProductId" = p."Id"
+            LEFT JOIN "StockMovements" sm ON UPPER(CAST(sm."ProductId" AS TEXT)) = UPPER(CAST(p."Id" AS TEXT))
             GROUP BY p."Id", p."Name", p."SKU"
             ORDER BY TurnoverRate DESC
             LIMIT {topN}
@@ -360,16 +360,16 @@ public class AnalyticsReadRepository(IDbConnection connection) : IAnalyticsReadR
             SELECT
                 "Id" AS ProductId, "Name" AS ProductName, "SKU",
                 "CurrentStock", "ExpiryDate",
-                EXTRACT(DAY FROM ("ExpiryDate" - NOW()))::int AS DaysUntilExpiry
+                CAST(julianday("ExpiryDate") - julianday('now') AS INTEGER) AS DaysUntilExpiry
             FROM "Products"
             WHERE "ExpiryDate" IS NOT NULL
-              AND "ExpiryDate" <= NOW() + (@DaysAhead::int * INTERVAL '1 day')
-              AND "ExpiryDate" >= CURRENT_DATE
-              AND "IsActive" = true
+              AND "ExpiryDate" <= datetime('now', '+{daysAhead} days')
+              AND "ExpiryDate" >= date('now')
+              AND "IsActive" = 1
             ORDER BY "ExpiryDate" ASC
             LIMIT {pageSize} OFFSET {(page - 1) * pageSize}
             """;
-        return (await connection.QueryAsync<ExpiringProductDto>(sql, new { DaysAhead = daysAhead })).AsList();
+        return (await connection.QueryAsync<ExpiringProductDto>(sql)).AsList();
     }
 
     public async Task<IReadOnlyList<LocationCapacityDto>> GetLocationCapacityAsync(CancellationToken ct = default)
@@ -381,8 +381,8 @@ public class AnalyticsReadRepository(IDbConnection connection) : IAnalyticsReadR
                 COALESCE(SUM(p."CurrentStock"), 0) AS CurrentStock,
                 ROUND(COALESCE(SUM(p."CurrentStock"), 0) * 100.0 / NULLIF(l."Capacity", 0), 2) AS UtilizationPercent
             FROM "Locations" l
-            LEFT JOIN "Products" p ON p."LocationId" = l."Id" AND p."IsActive" = true
-            WHERE l."IsActive" = true
+            LEFT JOIN "Products" p ON UPPER(CAST(p."LocationId" AS TEXT)) = UPPER(CAST(l."Id" AS TEXT)) AND p."IsActive" = 1
+            WHERE l."IsActive" = 1
             GROUP BY l."Id", l."Name", l."Code", l."Capacity"
             ORDER BY UtilizationPercent DESC
             """;
@@ -398,10 +398,10 @@ public class AnalyticsReadRepository(IDbConnection connection) : IAnalyticsReadR
                 COUNT(sm."Id") AS TotalPurchases,
                 SUM(CASE WHEN sm."MovementType" = 'Purchase' THEN sm."Quantity" * p."CostPrice" ELSE 0 END) AS TotalPurchaseValue
             FROM "Suppliers" s
-            LEFT JOIN "Products" p ON p."SupplierId" = s."Id"
-            LEFT JOIN "StockMovements" sm ON sm."ProductId" = p."Id"
+            LEFT JOIN "Products" p ON UPPER(CAST(p."SupplierId" AS TEXT)) = UPPER(CAST(s."Id" AS TEXT))
+            LEFT JOIN "StockMovements" sm ON UPPER(CAST(sm."ProductId" AS TEXT)) = UPPER(CAST(p."Id" AS TEXT))
                 AND sm."MovementType" IN ('StockIn','Purchase')
-            WHERE s."IsActive" = true
+            WHERE s."IsActive" = 1
             GROUP BY s."Id", s."Name", s."Code"
             ORDER BY TotalPurchaseValue DESC
             """;
@@ -424,8 +424,8 @@ public class AnalyticsReadRepository(IDbConnection connection) : IAnalyticsReadR
                 p."CurrentStock" * p."UnitPrice" AS TotalValue,
                 COUNT(sm."Id") AS TotalMovements
             FROM "Products" p
-            LEFT JOIN "StockMovements" sm ON sm."ProductId" = p."Id"
-            WHERE p."IsActive" = true
+            LEFT JOIN "StockMovements" sm ON UPPER(CAST(sm."ProductId" AS TEXT)) = UPPER(CAST(p."Id" AS TEXT))
+            WHERE p."IsActive" = 1
             GROUP BY p."Id", p."Name", p."SKU", p."Category", p."CurrentStock", p."UnitPrice"
             ORDER BY {orderClause}
             LIMIT {topN}

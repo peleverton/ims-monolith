@@ -74,7 +74,24 @@ public static class InventoryModuleExtensions
 
     /// <summary>
     /// US-065: Usa MigrateAsync (SQLite/PostgreSQL) ou EnsureCreated (InMemory/testes).
+    /// US-081: After migrations, seeds demo data for tenant-demo-1 and tenant-demo-2.
     /// </summary>
     public static async Task InitializeInventoryModuleAsync(this IServiceProvider services)
-        => await services.ApplyMigrationsAsync<InventoryDbContext>();
+    {
+        await services.ApplyMigrationsAsync<InventoryDbContext>();
+
+        using var scope = services.CreateScope();
+        var env = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
+        if (env.IsDevelopment())
+        {
+            // Skip tenant demo seed in integration test environments
+            // (detected by the IntegrationTestMode configuration key)
+            var config = scope.ServiceProvider.GetService<Microsoft.Extensions.Configuration.IConfiguration>();
+            if (config?["IntegrationTestMode"] == "true")
+                return;
+
+            var db = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+            await InventoryTenantSeed.SeedAsync(db);
+        }
+    }
 }
