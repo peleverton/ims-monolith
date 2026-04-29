@@ -28,7 +28,7 @@ public class ProductReadRepository(IDbConnection connection) : IProductReadRepos
                    "Unit", "Currency", "LocationId", "SupplierId", "ExpiryDate",
                    "StockStatus", "IsActive", "CreatedAt", "UpdatedAt"
             FROM "Products"
-            WHERE UPPER("Id"::text) = @Id
+            WHERE UPPER(CAST("Id" AS TEXT)) = @Id
             """;
 
         return await connection.QuerySingleOrDefaultAsync<ProductReadDto>(sql, new { Id = GuidHelper.Up(id) });
@@ -73,17 +73,17 @@ public class ProductReadRepository(IDbConnection connection) : IProductReadRepos
         }
         if (locationId.HasValue)
         {
-            whereClauses.Add("UPPER(\"LocationId\"::text) = @LocationId");
+            whereClauses.Add("UPPER(CAST(\"LocationId\" AS TEXT)) = @LocationId");
             parameters.Add("LocationId", GuidHelper.Up(locationId));
         }
         if (supplierId.HasValue)
         {
-            whereClauses.Add("UPPER(\"SupplierId\"::text) = @SupplierId");
+            whereClauses.Add("UPPER(CAST(\"SupplierId\" AS TEXT)) = @SupplierId");
             parameters.Add("SupplierId", GuidHelper.Up(supplierId));
         }
         if (!string.IsNullOrWhiteSpace(search))
         {
-            whereClauses.Add("(\"Name\" ILIKE @Search OR \"SKU\" ILIKE @Search OR \"Description\" ILIKE @Search)");
+            whereClauses.Add("(UPPER(\"Name\") LIKE UPPER(@Search) OR UPPER(\"SKU\") LIKE UPPER(@Search) OR UPPER(\"Description\") LIKE UPPER(@Search))");
             parameters.Add("Search", $"%{search}%");
         }
 
@@ -131,7 +131,7 @@ public class StockMovementReadRepository(IDbConnection connection) : IStockMovem
 
         if (productId.HasValue)
         {
-            whereClauses.Add("UPPER(sm.\"ProductId\"::text) = @ProductId");
+            whereClauses.Add("UPPER(CAST(sm.\"ProductId\" AS TEXT)) = @ProductId");
             parameters.Add("ProductId", GuidHelper.Up(productId));
         }
         if (movementType.HasValue)
@@ -159,8 +159,8 @@ public class StockMovementReadRepository(IDbConnection connection) : IStockMovem
                    sm."MovementType", sm."Quantity", sm."LocationId", l."Name" AS "LocationName",
                    sm."Reference", sm."Notes", sm."MovementDate"
             FROM "StockMovements" sm
-            LEFT JOIN "Products" p ON UPPER(p."Id"::text) = UPPER(sm."ProductId"::text)
-            LEFT JOIN "Locations" l ON UPPER(l."Id"::text) = UPPER(sm."LocationId"::text)
+            LEFT JOIN "Products" p ON UPPER(CAST(p."Id" AS TEXT)) = UPPER(CAST(sm."ProductId" AS TEXT))
+            LEFT JOIN "Locations" l ON UPPER(CAST(l."Id" AS TEXT)) = UPPER(CAST(sm."LocationId" AS TEXT))
             {whereClause}
             ORDER BY sm."MovementDate" DESC
             LIMIT @PageSize OFFSET @Offset;
@@ -191,7 +191,7 @@ public class SupplierReadRepository(IDbConnection connection) : ISupplierReadRep
                    "Country", "PostalCode", "TaxId", "CreditLimit", "PaymentTermsDays",
                    "IsActive", "Notes", "CreatedAt", "UpdatedAt"
             FROM "Suppliers"
-            WHERE UPPER("Id"::text) = @Id
+            WHERE UPPER(CAST("Id" AS TEXT)) = @Id
             """;
 
         return await connection.QuerySingleOrDefaultAsync<SupplierReadDto>(sql, new { Id = GuidHelper.Up(id) });
@@ -214,7 +214,7 @@ public class SupplierReadRepository(IDbConnection connection) : ISupplierReadRep
         }
         if (!string.IsNullOrWhiteSpace(search))
         {
-            whereClauses.Add("(\"Name\" ILIKE @Search OR \"Code\" ILIKE @Search OR \"ContactPerson\" ILIKE @Search)");
+            whereClauses.Add("(UPPER(\"Name\") LIKE UPPER(@Search) OR UPPER(\"Code\") LIKE UPPER(@Search) OR UPPER(\"ContactPerson\") LIKE UPPER(@Search))");
             parameters.Add("Search", $"%{search}%");
         }
 
@@ -254,7 +254,7 @@ public class LocationReadRepository(IDbConnection connection) : ILocationReadRep
             SELECT "Id", "Name", "Code", "Type", "Capacity", "Description", "ParentLocationId",
                    "Address", "City", "State", "Country", "PostalCode", "IsActive", "CreatedAt", "UpdatedAt"
             FROM "Locations"
-            WHERE UPPER("Id"::text) = @Id
+            WHERE UPPER(CAST("Id" AS TEXT)) = @Id
             """;
 
         return await connection.QuerySingleOrDefaultAsync<LocationReadDto>(sql, new { Id = GuidHelper.Up(id) });
@@ -283,7 +283,7 @@ public class LocationReadRepository(IDbConnection connection) : ILocationReadRep
         }
         if (!string.IsNullOrWhiteSpace(search))
         {
-            whereClauses.Add("(\"Name\" ILIKE @Search OR \"Code\" ILIKE @Search OR \"Description\" ILIKE @Search)");
+            whereClauses.Add("(UPPER(\"Name\") LIKE UPPER(@Search) OR UPPER(\"Code\") LIKE UPPER(@Search) OR UPPER(\"Description\") LIKE UPPER(@Search))");
             parameters.Add("Search", $"%{search}%");
         }
 

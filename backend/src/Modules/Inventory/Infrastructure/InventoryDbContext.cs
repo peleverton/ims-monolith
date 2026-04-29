@@ -1,13 +1,21 @@
 using IMS.Modular.Modules.Inventory.Domain.Entities;
 using IMS.Modular.Shared.Domain;
+using IMS.Modular.Shared.MultiTenancy;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.FeatureManagement;
 
 namespace IMS.Modular.Modules.Inventory.Infrastructure;
 
-// US-022: herda BaseDbContext — SaveChangesAsync com domain event dispatch centralizado
-public class InventoryDbContext(DbContextOptions<InventoryDbContext> options, IMediator mediator)
-    : BaseDbContext(options, mediator)
+/// <summary>
+/// US-081: Migrated to TenantAwareDbContext — applies global TenantId query filter on all entities.
+/// </summary>
+public class InventoryDbContext(
+    DbContextOptions<InventoryDbContext> options,
+    IMediator mediator,
+    ITenantService tenantService,
+    IFeatureManager featureManager)
+    : TenantAwareDbContext(options, mediator, tenantService, featureManager)
 {
     public DbSet<Product> Products => Set<Product>();
     public DbSet<Supplier> Suppliers => Set<Supplier>();
@@ -17,6 +25,12 @@ public class InventoryDbContext(DbContextOptions<InventoryDbContext> options, IM
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        // US-081: Apply global tenant filter
+        ApplyTenantFilter<Product>(modelBuilder);
+        ApplyTenantFilter<Supplier>(modelBuilder);
+        ApplyTenantFilter<Location>(modelBuilder);
+        ApplyTenantFilter<StockMovement>(modelBuilder);
 
         modelBuilder.Entity<Product>(entity =>
         {
@@ -32,12 +46,14 @@ public class InventoryDbContext(DbContextOptions<InventoryDbContext> options, IM
             entity.Property(e => e.Currency).HasMaxLength(10);
             entity.Property(e => e.UnitPrice).HasPrecision(18, 2);
             entity.Property(e => e.CostPrice).HasPrecision(18, 2);
+            entity.Property(e => e.TenantId).HasMaxLength(50);
             entity.HasIndex(e => e.SKU).IsUnique();
             entity.HasIndex(e => e.Category);
             entity.HasIndex(e => e.StockStatus);
             entity.HasIndex(e => e.LocationId);
             entity.HasIndex(e => e.SupplierId);
             entity.HasIndex(e => e.IsActive);
+            entity.HasIndex(e => e.TenantId);
             entity.Ignore(e => e.DomainEvents);
         });
 
@@ -58,8 +74,10 @@ public class InventoryDbContext(DbContextOptions<InventoryDbContext> options, IM
             entity.Property(e => e.TaxId).HasMaxLength(50);
             entity.Property(e => e.CreditLimit).HasPrecision(18, 2);
             entity.Property(e => e.Notes).HasMaxLength(2000);
+            entity.Property(e => e.TenantId).HasMaxLength(50);
             entity.HasIndex(e => e.Code).IsUnique();
             entity.HasIndex(e => e.IsActive);
+            entity.HasIndex(e => e.TenantId);
             entity.Ignore(e => e.DomainEvents);
         });
 
@@ -76,10 +94,12 @@ public class InventoryDbContext(DbContextOptions<InventoryDbContext> options, IM
             entity.Property(e => e.State).HasMaxLength(100);
             entity.Property(e => e.Country).HasMaxLength(100);
             entity.Property(e => e.PostalCode).HasMaxLength(20);
+            entity.Property(e => e.TenantId).HasMaxLength(50);
             entity.HasIndex(e => e.Code).IsUnique();
             entity.HasIndex(e => e.Type);
             entity.HasIndex(e => e.ParentLocationId);
             entity.HasIndex(e => e.IsActive);
+            entity.HasIndex(e => e.TenantId);
             entity.Ignore(e => e.DomainEvents);
         });
 
@@ -90,10 +110,12 @@ public class InventoryDbContext(DbContextOptions<InventoryDbContext> options, IM
             entity.Property(e => e.MovementType).HasConversion<string>().HasMaxLength(30);
             entity.Property(e => e.Reference).HasMaxLength(200);
             entity.Property(e => e.Notes).HasMaxLength(1000);
+            entity.Property(e => e.TenantId).HasMaxLength(50);
             entity.HasIndex(e => e.ProductId);
             entity.HasIndex(e => e.MovementType);
             entity.HasIndex(e => e.MovementDate);
             entity.HasIndex(e => e.LocationId);
+            entity.HasIndex(e => e.TenantId);
             entity.Ignore(e => e.DomainEvents);
         });
     }
