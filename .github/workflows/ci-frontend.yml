@@ -200,6 +200,12 @@ jobs:
           NEXTAUTH_URL: http://localhost:3000
           NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL || 'http://localhost:5049' }}
 
+      - name: Copy static assets to standalone output
+        run: |
+          cp -r public .next/standalone/public
+          cp -r .next/static .next/standalone/.next/static
+        working-directory: frontend/apps/next-shell
+
       - name: Run Playwright E2E tests
         run: npx playwright test --project=auth-flow
         working-directory: frontend/apps/next-shell
