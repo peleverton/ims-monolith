@@ -17,11 +17,16 @@ const cookieOpts = (maxAge: number) =>
 export async function POST(request: NextRequest) {
   const body = await request.json();
 
-  const upstream = await fetch(`${IMS_API}/api/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  let upstream: Response;
+  try {
+    upstream = await fetch(`${IMS_API}/api/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    return NextResponse.json({ message: "Serviço indisponível" }, { status: 503 });
+  }
 
   if (!upstream.ok) {
     const err = await upstream.json().catch(() => ({ message: "Unauthorized" }));

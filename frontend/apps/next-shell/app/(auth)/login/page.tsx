@@ -36,20 +36,24 @@ function LoginForm() {
   } = useForm<FormData>({ resolver: zodResolver(schema) });
 
   const onSubmit = async (data: FormData) => {
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
 
-    if (!res.ok) {
-      toast.error("Usuário ou senha incorretos");
-      return;
+      if (!res.ok) {
+        toast.error("Usuário ou senha incorretos");
+        return;
+      }
+
+      toast.success("Login realizado com sucesso!");
+      router.push(callbackUrl);
+      router.refresh();
+    } catch {
+      toast.error("Erro ao conectar ao servidor");
     }
-
-    toast.success("Login realizado com sucesso!");
-    router.push(callbackUrl);
-    router.refresh();
   };
 
   return (
@@ -58,11 +62,12 @@ function LoginForm() {
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-blue-200 mb-1">
+          <label htmlFor="username" className="block text-sm font-medium text-blue-200 mb-1">
             Usuário
           </label>
           <input
             {...register("username")}
+            id="username"
             type="text"
             placeholder="admin"
             className="w-full px-4 py-2.5 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-400"
@@ -73,12 +78,13 @@ function LoginForm() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-blue-200 mb-1">
+          <label htmlFor="password" className="block text-sm font-medium text-blue-200 mb-1">
             Senha
           </label>
           <div className="relative">
             <input
               {...register("password")}
+              id="password"
               type={showPassword ? "text" : "password"}
               placeholder="••••••••"
               className="w-full px-4 py-2.5 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-400 pr-10"
