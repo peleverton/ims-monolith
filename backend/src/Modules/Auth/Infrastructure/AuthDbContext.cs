@@ -76,9 +76,13 @@ public class AuthDbContext(DbContextOptions<AuthDbContext> options) : DbContext(
         var userRoleId = Guid.Parse("22222222-2222-2222-2222-222222222222");
         var adminUserId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
 
+        // Static seed timestamp to keep migrations deterministic (avoid PendingModelChanges
+        // warnings caused by DateTime.UtcNow defaults on BaseEntity properties).
+        var seedTimestamp = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
         modelBuilder.Entity<Role>().HasData(
-            new Role { Id = adminRoleId, Name = "Admin", Description = "Administrator role" },
-            new Role { Id = userRoleId, Name = "User", Description = "Default user role" });
+            new Role { Id = adminRoleId, Name = "Admin", Description = "Administrator role", CreatedAt = seedTimestamp },
+            new Role { Id = userRoleId, Name = "User", Description = "Default user role", CreatedAt = seedTimestamp });
 
         // Pre-computed SHA256("Admin@123!") as Base64 — must be a static constant
         // to avoid EF's PendingModelChangesWarning (non-deterministic HasData).
@@ -91,10 +95,11 @@ public class AuthDbContext(DbContextOptions<AuthDbContext> options) : DbContext(
             Email = "admin@ims.com",
             PasswordHash = adminPasswordHash,
             FullName = "System Administrator",
-            IsActive = true
+            IsActive = true,
+            CreatedAt = seedTimestamp
         });
 
         modelBuilder.Entity<UserRole>().HasData(
-            new UserRole { UserId = adminUserId, RoleId = adminRoleId });
+            new UserRole { UserId = adminUserId, RoleId = adminRoleId, AssignedAt = seedTimestamp });
     }
 }
