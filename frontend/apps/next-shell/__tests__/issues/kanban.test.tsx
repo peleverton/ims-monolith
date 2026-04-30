@@ -63,10 +63,13 @@ const makeIssue = (overrides?: Partial<IssueDto>): IssueDto => ({
   description: "Descrição do bug",
   status: "Open",
   priority: "High",
+  reporterId: "user-1",
   assigneeName: "Neo",
   createdAt: "2026-04-01T10:00:00Z",
   updatedAt: "2026-04-01T10:00:00Z",
   tags: [],
+  comments: [],
+  activities: [],
   commentsCount: 0,
   ...overrides,
 });
