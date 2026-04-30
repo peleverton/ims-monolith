@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Vendor/generated files
+    "public/_blazor/**",
+    "public/**/*.min.js",
+    "public/**/*.bundle.js",
   ]),
 ]);
 

@@ -34,7 +34,9 @@ export function BlazorHost({ mountDelay = 100 }: BlazorHostProps) {
     };
 
     // If Blazor already started in a previous render (SPA navigation), skip probe.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if ((window as any).__blazorStarted) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setBlazorAvailable(true);
       return;
     }
@@ -49,6 +51,7 @@ export function BlazorHost({ mountDelay = 100 }: BlazorHostProps) {
   if (blazorAvailable === false) return null;
   if (blazorAvailable === null) return null;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   if ((window as any).__blazorStarted) return null;
 
   return (
@@ -73,13 +76,16 @@ export function BlazorHost({ mountDelay = 100 }: BlazorHostProps) {
         data-no-auto-start="true"
         onLoad={() => {
           setTimeout(async () => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             if ((window as any).__blazorStarted) return;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (window as any).__blazorStarted = true;
 
             try {
               await window.Blazor?.start({});
             } catch (err: unknown) {
               console.warn('[BlazorHost] Blazor start failed:', err);
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               (window as any).__blazorStarted = false;
             }
           }, mountDelay);

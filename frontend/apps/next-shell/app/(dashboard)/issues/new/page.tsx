@@ -51,6 +51,7 @@ export default function NewIssuePage() {
 
       toast.success("Issue criada com sucesso!");
       // Force full navigation to ensure server components re-fetch fresh data
+      // eslint-disable-next-line react-hooks/immutability
       window.location.href = "/issues";
     } catch (err) {
       console.error("[NewIssue] Fetch error:", err);

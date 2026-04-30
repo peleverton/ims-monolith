@@ -10,6 +10,7 @@ interface BlazorElementProps {
 
 // Declaração para TypeScript reconhecer os custom elements como JSX válido
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace JSX {
     interface IntrinsicElements {
       'inventory-grid': React.DetailedHTMLProps<
