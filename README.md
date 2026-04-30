@@ -6,7 +6,9 @@
 [![Architecture](https://img.shields.io/badge/Architecture-Modular%20Monolith-blue)]()
 [![License](https://img.shields.io/badge/License-MIT-green)]()
 
-A modular monolith issue and inventory management system built with .NET 9, featuring **6 business modules**, CQRS with MediatR, Clean Architecture, Minimal APIs, domain events, distributed caching (Redis), real-time notifications (SignalR), comprehensive analytics, and full observability (OpenTelemetry + Serilog + Prometheus).
+A modular monolith issue and inventory management system built with .NET 9, featuring **9 business modules** (Auth, UserManagement, Issues, Inventory, InventoryIssues, Analytics, Notifications, Webhooks, Search), CQRS with MediatR, Clean Architecture, Minimal APIs, domain events, distributed caching (Redis), real-time notifications (SignalR), background jobs (Hangfire), full-text search (Meilisearch), feature flags, multi-tenancy (PoC), microsserviço Issues PoC com YARP, e observabilidade completa (OpenTelemetry + Serilog + Prometheus + Grafana + Jaeger).
+
+> 🟢 **Status:** v3.0 — 79 USs entregues, 217 testes backend passando, frontend Next.js 16 + Blazor WASM, contract tests (Pact), CI/CD verde.
 
 ---
 
