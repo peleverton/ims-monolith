@@ -88,8 +88,8 @@ Frontend (Next.js 16 + Blazor WASM)
 |---|---|---|---|
 | D-22 | **Multi-tenancy só em PoC** — feature flag OFF, queries não exercitadas em produção | `Shared/MultiTenancy/`, `*DbContext` | Bloqueador para SaaS multi-cliente |
 | D-23 | **Sem load testing** — não conhecemos o ponto de saturação | infra | Risco em primeiro pico de tráfego real |
-| D-24 | **Backup/restore PostgreSQL não automatizado** | infra | Perda de dados em desastre |
-| D-25 | **Sem disaster recovery documentado** (RTO/RPO) | docs | Não atende compliance básico |
+| D-24 | ~~**Backup/restore PostgreSQL não automatizado**~~ | infra | ✅ Resolvido em US-081 (`scripts/backup-postgres.sh` + S3 + retenção) |
+| D-25 | ~~**Sem disaster recovery documentado** (RTO/RPO)~~ | docs | ✅ Resolvido em US-081 (`docs/RUNBOOK.md`, RTO 4h / RPO 24h) |
 
 #### 🟡 Importantes
 
@@ -140,14 +140,17 @@ Promover o multi-tenancy de PoC para feature suportada em produção:
 
 **Esforço:** 2 semanas
 
-#### US-081: Backup automatizado e Disaster Recovery
+#### US-081: Backup automatizado e Disaster Recovery — ✅ ENTREGUE
 
-- `pg_dump` cron com upload para S3-compatible
-- Procedimento de restore documentado e testado em ambiente staging
-- RTO 4h, RPO 24h definidos
-- Runbook em `docs/RUNBOOK.md`
+- ✅ `pg_dump` automatizado com upload para S3-compatible (`scripts/backup-postgres.sh`)
+- ✅ Tier automático daily/weekly/monthly + retenção configurável
+- ✅ Restore com salvaguardas (`scripts/restore-postgres.sh`: pre-restore dump, FORCE flag)
+- ✅ Imagem `Dockerfile.backup` + serviço `backup` no docker-compose (profile `backup`)
+- ✅ RTO 4h / RPO 24h definidos
+- ✅ Runbook completo em [`docs/RUNBOOK.md`](./RUNBOOK.md)
+- ✅ Variáveis documentadas em `.env.example`
 
-**Esforço:** 3 dias
+**Esforço:** 3 dias — concluído.
 
 #### US-082: Load testing baseline com k6
 
@@ -278,8 +281,8 @@ Sprint 16+: US-090 AI-assisted triage (PoC)
 | Performance | TTI Blazor (cold) | ~2s (com Brotli) | ≤ 1.5s |
 | Performance | p95 `/api/issues` | desconhecido | ≤ 200ms a 500RPS |
 | Multi-tenancy | Cobertura de queries com filtro | PoC | 100% em produção |
-| DR | RTO definido | ❌ | ≤ 4h |
-| DR | RPO definido | ❌ | ≤ 24h |
+| DR | RTO definido | ✅ 4h (US-081) | Manter |
+| DR | RPO definido | ✅ 24h (US-081) | Reduzir para ≤ 1h via WAL archiving |
 
 ---
 

@@ -229,6 +229,42 @@ services:
     networks:
       - ims-net
 
+  # ─────────────────────────────────────────────────────────
+  # US-081 — PostgreSQL backup (cron-style) + DR helper
+  # ─────────────────────────────────────────────────────────
+  # Run on demand:
+  #   docker compose --profile backup run --rm backup
+  # Or schedule on the host crontab (UTC):
+  #   0 3 * * * docker compose -f /opt/ims/docker-compose.yml --profile backup run --rm backup
+  backup:
+    profiles: ["backup"]
+    build:
+      context: .
+      dockerfile: Dockerfile.backup
+    image: ims-backup:latest
+    container_name: ims-backup
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-ims_db}
+      POSTGRES_USER: ${POSTGRES_USER:-ims}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      S3_BUCKET: ${BACKUP_S3_BUCKET}
+      S3_PREFIX: ${BACKUP_S3_PREFIX:-postgres}
+      S3_ENDPOINT_URL: ${BACKUP_S3_ENDPOINT_URL:-}
+      AWS_ACCESS_KEY_ID: ${BACKUP_AWS_ACCESS_KEY_ID:-${AWS_ACCESS_KEY_ID:-}}
+      AWS_SECRET_ACCESS_KEY: ${BACKUP_AWS_SECRET_ACCESS_KEY:-${AWS_SECRET_ACCESS_KEY:-}}
+      AWS_REGION: ${BACKUP_AWS_REGION:-us-east-1}
+      RETENTION_DAILY: ${BACKUP_RETENTION_DAILY:-7}
+      RETENTION_WEEKLY: ${BACKUP_RETENTION_WEEKLY:-4}
+      RETENTION_MONTHLY: ${BACKUP_RETENTION_MONTHLY:-12}
+    networks:
+      - ims-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
 # ─────────────────────────────────────────────────────────
 # Volumes
 # ─────────────────────────────────────────────────────────

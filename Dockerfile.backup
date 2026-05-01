@@ -1,0 +1,25 @@
+# =============================================================================
+# US-081 — Backup container for IMS PostgreSQL
+# =============================================================================
+# Provides postgresql-client (pg_dump/psql) + aws-cli inside a small Alpine
+# image. Used by docker-compose `backup` service and CI restore-test job.
+# =============================================================================
+FROM alpine:3.20
+
+RUN apk add --no-cache \
+      bash \
+      curl \
+      gzip \
+      postgresql16-client \
+      aws-cli \
+      tzdata
+
+WORKDIR /opt/backup
+
+COPY scripts/backup-postgres.sh   /opt/backup/backup-postgres.sh
+COPY scripts/restore-postgres.sh  /opt/backup/restore-postgres.sh
+
+RUN chmod +x /opt/backup/*.sh
+
+ENTRYPOINT ["/bin/bash", "-c"]
+CMD ["/opt/backup/backup-postgres.sh"]
