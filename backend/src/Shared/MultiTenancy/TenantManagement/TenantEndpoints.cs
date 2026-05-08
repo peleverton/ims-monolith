@@ -78,6 +78,13 @@ public static class TenantEndpoints
             if (req.Plan is not null)                    tenant.Plan = req.Plan;
             if (req.ContactEmail is not null)            tenant.ContactEmail = req.ContactEmail;
             if (req.Notes is not null)                   tenant.Notes = req.Notes;
+            // US-080: Allow re-activation via PUT
+            if (req.IsActive.HasValue)
+            {
+                tenant.IsActive = req.IsActive.Value;
+                if (req.IsActive.Value) tenant.DeactivatedAt = null;
+                else tenant.DeactivatedAt ??= DateTime.UtcNow;
+            }
 
             await db.SaveChangesAsync();
             return Results.Ok(TenantDto.From(tenant));
@@ -127,4 +134,5 @@ public record UpdateTenantRequest(
     string? Name,
     string? Plan,
     string? ContactEmail,
-    string? Notes);
+    string? Notes,
+    bool? IsActive = null);

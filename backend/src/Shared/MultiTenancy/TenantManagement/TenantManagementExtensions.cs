@@ -28,7 +28,11 @@ public static class TenantManagementExtensions
         return services;
     }
 
-    /// <summary>Applies migrations (or EnsureCreated for SQLite) and seeds demo tenants.</summary>
+    /// <summary>
+    /// Applies EF Core migrations for the Tenants catalog.
+    /// SQLite (test/dev): falls back to EnsureCreated (no migration runner needed).
+    /// PostgreSQL (staging/prod): always runs MigrateAsync (idempotent).
+    /// </summary>
     public static async Task InitializeTenantDbAsync(this IServiceProvider services)
     {
         using var scope = services.CreateScope();
@@ -38,6 +42,6 @@ public static class TenantManagementExtensions
         if (isSqlite)
             await db.Database.EnsureCreatedAsync();
         else
-            await db.Database.MigrateAsync();
+            await db.Database.MigrateAsync(); // idempotent — safe to run on every startup
     }
 }
