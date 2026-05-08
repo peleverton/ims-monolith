@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using IMS.Modular.Shared.Abstractions;
+using IMS.Modular.Shared.MultiTenancy;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -11,18 +12,24 @@ namespace IMS.Modular.Shared.Behaviors;
 /// MediatR Pipeline Behavior that auto-caches query responses.
 /// Only applies to requests that implement ICacheable.
 /// Uses SHA256 hashing for cache key generation.
+/// US-080: Tenant ID is always included in the cache key to prevent cross-tenant cache leaks.
 /// </summary>
 public sealed class CachingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
     where TRequest : IRequest<TResponse>
 {
     private readonly ICacheService _cache;
     private readonly ILogger<CachingBehavior<TRequest, TResponse>> _logger;
+    private readonly ITenantService? _tenantService;
     private static readonly TimeSpan DefaultCacheDuration = TimeSpan.FromMinutes(5);
 
-    public CachingBehavior(ICacheService cache, ILogger<CachingBehavior<TRequest, TResponse>> logger)
+    public CachingBehavior(
+        ICacheService cache,
+        ILogger<CachingBehavior<TRequest, TResponse>> logger,
+        ITenantService? tenantService = null)
     {
         _cache = cache;
         _logger = logger;
+        _tenantService = tenantService;
     }
 
     public async Task<TResponse> Handle(
@@ -64,13 +71,15 @@ public sealed class CachingBehavior<TRequest, TResponse> : IPipelineBehavior<TRe
 
     /// <summary>
     /// Generates a deterministic cache key using SHA256 hash of the request properties.
-    /// Format: {prefix}:{sha256-hash}
+    /// Format: {prefix}:{tenantId}:{sha256-hash}
+    /// US-080: Tenant ID is always included so different tenants never share a cached result.
     /// </summary>
-    private static string GenerateCacheKey(string prefix, TRequest request)
+    private string GenerateCacheKey(string prefix, TRequest request)
     {
+        var tenantSegment = _tenantService?.TenantId ?? "default";
         var requestJson = JsonSerializer.Serialize(request);
         var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(requestJson));
         var hash = Convert.ToHexString(hashBytes)[..16].ToLowerInvariant();
-        return $"{prefix}:{hash}";
+        return $"{prefix}:{tenantSegment}:{hash}";
     }
 }

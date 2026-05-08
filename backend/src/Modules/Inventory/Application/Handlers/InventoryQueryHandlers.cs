@@ -4,6 +4,7 @@ using IMS.Modular.Modules.Inventory.Application.Queries;
 using IMS.Modular.Modules.Inventory.Domain;
 using IMS.Modular.Shared.Abstractions;
 using IMS.Modular.Shared.Domain;
+using IMS.Modular.Shared.MultiTenancy;
 using MediatR;
 
 namespace IMS.Modular.Modules.Inventory.Application.Handlers;
@@ -12,12 +13,15 @@ namespace IMS.Modular.Modules.Inventory.Application.Handlers;
 
 public sealed class GetProductByIdQueryHandler(
     IProductReadRepository repo,
-    ICacheService cache)
+    ICacheService cache,
+    ITenantService tenantService)
     : IRequestHandler<GetProductByIdQuery, ProductDto?>
 {
     public async Task<ProductDto?> Handle(GetProductByIdQuery request, CancellationToken ct)
     {
-        var key = $"inventory-product-{request.Id}";
+        // US-080: include tenant in cache key to prevent cross-tenant cache hits
+        var tenant = tenantService.IsMultiTenancyEnabled ? tenantService.TenantId ?? "default" : "global";
+        var key = $"inventory-product-{tenant}-{request.Id}";
         var cached = await cache.GetAsync<ProductDto>(key, ct);
         if (cached is not null) return cached;
 
@@ -41,12 +45,15 @@ public sealed class GetProductBySkuQueryHandler(IProductReadRepository repo)
 
 public sealed class GetProductsQueryHandler(
     IProductReadRepository repo,
-    ICacheService cache)
+    ICacheService cache,
+    ITenantService tenantService)
     : IRequestHandler<GetProductsQuery, PagedResult<ProductListDto>>
 {
     public async Task<PagedResult<ProductListDto>> Handle(GetProductsQuery request, CancellationToken ct)
     {
-        var key = $"inventory-products-list-{request.Page}-{request.PageSize}-{request.Category}-{request.StockStatus}-{request.Search}-{request.LocationId}-{request.SupplierId}";
+        // US-080: include tenant in cache key to prevent cross-tenant cache hits
+        var tenant = tenantService.IsMultiTenancyEnabled ? tenantService.TenantId ?? "default" : "global";
+        var key = $"inventory-products-list-{tenant}-{request.Page}-{request.PageSize}-{request.Category}-{request.StockStatus}-{request.Search}-{request.LocationId}-{request.SupplierId}";
         var cached = await cache.GetAsync<PagedResult<ProductListDto>>(key, ct);
         if (cached is not null) return cached;
 

@@ -1,19 +1,27 @@
 using IMS.Modular.Modules.InventoryIssues.Domain.Entities;
-using IMS.Modular.Shared.Domain;
+using IMS.Modular.Shared.MultiTenancy;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace IMS.Modular.Modules.InventoryIssues.Infrastructure;
 
-// US-022: herda BaseDbContext — SaveChangesAsync com domain event dispatch centralizado
-public class InventoryIssuesDbContext(DbContextOptions<InventoryIssuesDbContext> options, IMediator mediator)
-    : BaseDbContext(options, mediator)
+/// <summary>
+/// US-080: TenantAwareDbContext — applies global TenantId query filter on InventoryIssues.
+/// </summary>
+public class InventoryIssuesDbContext(
+    DbContextOptions<InventoryIssuesDbContext> options,
+    IMediator mediator,
+    ITenantService tenantService)
+    : TenantAwareDbContext(options, mediator, tenantService)
 {
     public DbSet<InventoryIssue> InventoryIssues => Set<InventoryIssue>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        // US-080: Apply global tenant filter
+        ApplyTenantFilter<InventoryIssue>(modelBuilder);
 
         modelBuilder.Entity<InventoryIssue>(entity =>
         {
@@ -37,6 +45,8 @@ public class InventoryIssuesDbContext(DbContextOptions<InventoryIssuesDbContext>
             entity.HasIndex(e => e.AssigneeId);
             entity.HasIndex(e => e.DueDate);
             entity.HasIndex(e => e.CreatedAt);
+            entity.Property(e => e.TenantId).HasMaxLength(50);
+            entity.HasIndex(e => e.TenantId);
 
             entity.Ignore(e => e.DomainEvents);
         });

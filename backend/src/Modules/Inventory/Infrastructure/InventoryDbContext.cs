@@ -1,21 +1,18 @@
 using IMS.Modular.Modules.Inventory.Domain.Entities;
-using IMS.Modular.Shared.Domain;
 using IMS.Modular.Shared.MultiTenancy;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.FeatureManagement;
 
 namespace IMS.Modular.Modules.Inventory.Infrastructure;
 
 /// <summary>
-/// US-081: Migrated to TenantAwareDbContext — applies global TenantId query filter on all entities.
+/// US-080: TenantAwareDbContext — applies global TenantId query filter on all entities.
 /// </summary>
 public class InventoryDbContext(
     DbContextOptions<InventoryDbContext> options,
     IMediator mediator,
-    ITenantService tenantService,
-    IFeatureManager featureManager)
-    : TenantAwareDbContext(options, mediator, tenantService, featureManager)
+    ITenantService tenantService)
+    : TenantAwareDbContext(options, mediator, tenantService)
 {
     public DbSet<Product> Products => Set<Product>();
     public DbSet<Supplier> Suppliers => Set<Supplier>();

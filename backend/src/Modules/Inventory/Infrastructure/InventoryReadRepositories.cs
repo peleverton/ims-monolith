@@ -2,6 +2,7 @@ using System.Data;
 using Dapper;
 using IMS.Modular.Modules.Inventory.Domain;
 using IMS.Modular.Shared.Domain;
+using IMS.Modular.Shared.MultiTenancy;
 
 namespace IMS.Modular.Modules.Inventory.Infrastructure;
 
@@ -16,36 +17,59 @@ file static class GuidHelper
 }
 
 /// <summary>
-/// Dapper read repository for Product — raw SQL, direct DTO projection.
+/// Helper to build tenant WHERE clause for Dapper queries.
+/// When multi-tenancy is active, restricts to current tenant (or NULL = shared records).
 /// </summary>
-public class ProductReadRepository(IDbConnection connection) : IProductReadRepository
+file static class TenantFilter
+{
+    internal static (string clause, DynamicParameters p) Build(ITenantService tenant, DynamicParameters? existing = null)
+    {
+        var p = existing ?? new DynamicParameters();
+        if (tenant.IsMultiTenancyEnabled && tenant.TenantId is not null)
+        {
+            p.Add("TenantId", tenant.TenantId);
+            return ("(\"TenantId\" IS NULL OR \"TenantId\" = @TenantId)", p);
+        }
+        return ("1=1", p);
+    }
+}
+
+/// <summary>
+/// Dapper read repository for Product — raw SQL, direct DTO projection.
+/// US-080: Applies tenant filter on all queries when multi-tenancy is enabled.
+/// </summary>
+public class ProductReadRepository(IDbConnection connection, ITenantService tenantService) : IProductReadRepository
 {
     public async Task<ProductReadDto?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
-        const string sql = """
+        var (tenantClause, p) = TenantFilter.Build(tenantService);
+        p.Add("Id", GuidHelper.Up(id));
+        var sql = $"""
             SELECT "Id", "Name", "SKU", "Barcode", "Description", "Category", "CurrentStock",
                    "MinimumStockLevel", "MaximumStockLevel", "UnitPrice", "CostPrice",
                    "Unit", "Currency", "LocationId", "SupplierId", "ExpiryDate",
                    "StockStatus", "IsActive", "CreatedAt", "UpdatedAt"
             FROM "Products"
-            WHERE UPPER(CAST("Id" AS TEXT)) = @Id
+            WHERE UPPER(CAST("Id" AS TEXT)) = @Id AND {tenantClause}
             """;
 
-        return await connection.QuerySingleOrDefaultAsync<ProductReadDto>(sql, new { Id = GuidHelper.Up(id) });
+        return await connection.QuerySingleOrDefaultAsync<ProductReadDto>(sql, p);
     }
 
     public async Task<ProductReadDto?> GetBySkuAsync(string sku, CancellationToken ct = default)
     {
-        const string sql = """
+        var (tenantClause, p) = TenantFilter.Build(tenantService);
+        p.Add("SKU", sku);
+        var sql = $"""
             SELECT "Id", "Name", "SKU", "Barcode", "Description", "Category", "CurrentStock",
                    "MinimumStockLevel", "MaximumStockLevel", "UnitPrice", "CostPrice",
                    "Unit", "Currency", "LocationId", "SupplierId", "ExpiryDate",
                    "StockStatus", "IsActive", "CreatedAt", "UpdatedAt"
             FROM "Products"
-            WHERE "SKU" = @SKU
+            WHERE "SKU" = @SKU AND {tenantClause}
             """;
 
-        return await connection.QuerySingleOrDefaultAsync<ProductReadDto>(sql, new { SKU = sku });
+        return await connection.QuerySingleOrDefaultAsync<ProductReadDto>(sql, p);
     }
 
     public async Task<PagedResult<ProductSummaryDto>> GetPagedAsync(
@@ -60,6 +84,10 @@ public class ProductReadRepository(IDbConnection connection) : IProductReadRepos
     {
         var whereClauses = new List<string>();
         var parameters = new DynamicParameters();
+
+        // US-080: tenant isolation
+        var (tenantClause, _) = TenantFilter.Build(tenantService, parameters);
+        whereClauses.Add(tenantClause);
 
         if (category.HasValue)
         {
@@ -87,9 +115,7 @@ public class ProductReadRepository(IDbConnection connection) : IProductReadRepos
             parameters.Add("Search", $"%{search}%");
         }
 
-        var whereClause = whereClauses.Count > 0
-            ? "WHERE " + string.Join(" AND ", whereClauses)
-            : "";
+        var whereClause = "WHERE " + string.Join(" AND ", whereClauses);
 
         var sql = $"""
             SELECT "Id", "Name", "SKU", "Category", "CurrentStock", "UnitPrice", "StockStatus", "IsActive", "CreatedAt"
@@ -115,7 +141,7 @@ public class ProductReadRepository(IDbConnection connection) : IProductReadRepos
 /// <summary>
 /// Dapper read repository for StockMovement.
 /// </summary>
-public class StockMovementReadRepository(IDbConnection connection) : IStockMovementReadRepository
+public class StockMovementReadRepository(IDbConnection connection, ITenantService tenantService) : IStockMovementReadRepository
 {
     public async Task<PagedResult<StockMovementReadDto>> GetPagedAsync(
         int page,
@@ -128,6 +154,13 @@ public class StockMovementReadRepository(IDbConnection connection) : IStockMovem
     {
         var whereClauses = new List<string>();
         var parameters = new DynamicParameters();
+
+        // US-080: tenant isolation (applied to StockMovements table alias sm)
+        if (tenantService.IsMultiTenancyEnabled && tenantService.TenantId is not null)
+        {
+            parameters.Add("TenantId", tenantService.TenantId);
+            whereClauses.Add("(sm.\"TenantId\" IS NULL OR sm.\"TenantId\" = @TenantId)");
+        }
 
         if (productId.HasValue)
         {
@@ -182,19 +215,21 @@ public class StockMovementReadRepository(IDbConnection connection) : IStockMovem
 /// <summary>
 /// Dapper read repository for Supplier.
 /// </summary>
-public class SupplierReadRepository(IDbConnection connection) : ISupplierReadRepository
+public class SupplierReadRepository(IDbConnection connection, ITenantService tenantService) : ISupplierReadRepository
 {
     public async Task<SupplierReadDto?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
-        const string sql = """
+        var (tenantClause, p) = TenantFilter.Build(tenantService);
+        p.Add("Id", GuidHelper.Up(id));
+        var sql = $"""
             SELECT "Id", "Name", "Code", "ContactPerson", "Email", "Phone", "Address", "City", "State",
                    "Country", "PostalCode", "TaxId", "CreditLimit", "PaymentTermsDays",
                    "IsActive", "Notes", "CreatedAt", "UpdatedAt"
             FROM "Suppliers"
-            WHERE UPPER(CAST("Id" AS TEXT)) = @Id
+            WHERE UPPER(CAST("Id" AS TEXT)) = @Id AND {tenantClause}
             """;
 
-        return await connection.QuerySingleOrDefaultAsync<SupplierReadDto>(sql, new { Id = GuidHelper.Up(id) });
+        return await connection.QuerySingleOrDefaultAsync<SupplierReadDto>(sql, p);
     }
 
     public async Task<PagedResult<SupplierSummaryDto>> GetPagedAsync(
@@ -207,6 +242,9 @@ public class SupplierReadRepository(IDbConnection connection) : ISupplierReadRep
         var whereClauses = new List<string>();
         var parameters = new DynamicParameters();
 
+        var (tenantClause, _) = TenantFilter.Build(tenantService, parameters);
+        whereClauses.Add(tenantClause);
+
         if (isActive.HasValue)
         {
             whereClauses.Add("\"IsActive\" = @IsActive");
@@ -218,9 +256,7 @@ public class SupplierReadRepository(IDbConnection connection) : ISupplierReadRep
             parameters.Add("Search", $"%{search}%");
         }
 
-        var whereClause = whereClauses.Count > 0
-            ? "WHERE " + string.Join(" AND ", whereClauses)
-            : "";
+        var whereClause = "WHERE " + string.Join(" AND ", whereClauses);
 
         var sql = $"""
             SELECT "Id", "Name", "Code", "ContactPerson", "Email", "IsActive", "CreatedAt"
@@ -246,18 +282,20 @@ public class SupplierReadRepository(IDbConnection connection) : ISupplierReadRep
 /// <summary>
 /// Dapper read repository for Location.
 /// </summary>
-public class LocationReadRepository(IDbConnection connection) : ILocationReadRepository
+public class LocationReadRepository(IDbConnection connection, ITenantService tenantService) : ILocationReadRepository
 {
     public async Task<LocationReadDto?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
-        const string sql = """
+        var (tenantClause, p) = TenantFilter.Build(tenantService);
+        p.Add("Id", GuidHelper.Up(id));
+        var sql = $"""
             SELECT "Id", "Name", "Code", "Type", "Capacity", "Description", "ParentLocationId",
                    "Address", "City", "State", "Country", "PostalCode", "IsActive", "CreatedAt", "UpdatedAt"
             FROM "Locations"
-            WHERE UPPER(CAST("Id" AS TEXT)) = @Id
+            WHERE UPPER(CAST("Id" AS TEXT)) = @Id AND {tenantClause}
             """;
 
-        return await connection.QuerySingleOrDefaultAsync<LocationReadDto>(sql, new { Id = GuidHelper.Up(id) });
+        return await connection.QuerySingleOrDefaultAsync<LocationReadDto>(sql, p);
     }
 
     public async Task<PagedResult<LocationSummaryDto>> GetPagedAsync(
@@ -270,6 +308,9 @@ public class LocationReadRepository(IDbConnection connection) : ILocationReadRep
     {
         var whereClauses = new List<string>();
         var parameters = new DynamicParameters();
+
+        var (tenantClause, _) = TenantFilter.Build(tenantService, parameters);
+        whereClauses.Add(tenantClause);
 
         if (type.HasValue)
         {
@@ -287,9 +328,7 @@ public class LocationReadRepository(IDbConnection connection) : ILocationReadRep
             parameters.Add("Search", $"%{search}%");
         }
 
-        var whereClause = whereClauses.Count > 0
-            ? "WHERE " + string.Join(" AND ", whereClauses)
-            : "";
+        var whereClause = "WHERE " + string.Join(" AND ", whereClauses);
 
         var sql = $"""
             SELECT "Id", "Name", "Code", "Type", "Capacity", "IsActive", "CreatedAt"

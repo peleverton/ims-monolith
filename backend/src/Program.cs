@@ -1,6 +1,7 @@
 using IMS.Modular.Modules.UserManagement;
 using IMS.Modular.Modules.UserManagement.Api;
 using IMS.Modular.Shared.FeatureFlags;
+using IMS.Modular.Shared.MultiTenancy.TenantManagement;
 using FluentValidation;
 using IMS.Modular.Modules.Analytics;
 using IMS.Modular.Modules.Analytics.Api;
@@ -161,6 +162,9 @@ builder.Services.AddImsFeatureFlags(builder.Configuration);
 // US-078: Multi-Tenancy
 builder.Services.AddMultiTenancy();
 
+// US-080: Tenant catalog (Tenants table + CRUD API)
+builder.Services.AddTenantManagement(builder.Configuration);
+
 // US-071: Full-text Search (Meilisearch)
 builder.Services.AddSearchModule(builder.Configuration);
 
@@ -254,6 +258,16 @@ app.MapGet("/api/ping", () => Results.Ok(new
 .WithTags("System")
 .AllowAnonymous();
 
+// US-080: Debug endpoint — returns current TenantContext state for integration tests
+app.MapGet("/api/debug/tenant", (IMS.Modular.Shared.MultiTenancy.ITenantService ts) => Results.Ok(new
+{
+    TenantId = ts.TenantId,
+    IsMultiTenancyEnabled = ts.IsMultiTenancyEnabled
+}))
+.WithName("DebugTenant")
+.WithTags("System")
+.AllowAnonymous();
+
 app.MapGet("/api/status", () => Results.Ok(new
 {
     Status = "Running",
@@ -282,6 +296,8 @@ NotificationsModule.Map(app);
 app.MapWebhooksModule();
 SearchModule.Map(app);
 FeaturesModule.Map(app);
+// US-080: Tenant management API
+TenantEndpoints.Map(app);
 
 // SignalR hub
 app.MapHub<NotificationsHub>("/hubs/notifications").AllowAnonymous();
@@ -300,6 +316,7 @@ if (await featureManager.IsEnabledAsync("UseIssuesMicroservice"))
 try
 {
     await app.Services.InitializeOutboxAsync();
+    await app.Services.InitializeTenantDbAsync();           // US-080
     await app.Services.InitializeAuthModuleAsync();
     await app.Services.InitializeIssuesModuleAsync();
     await app.Services.InitializeInventoryModuleAsync();

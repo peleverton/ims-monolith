@@ -26,14 +26,14 @@ public class BackgroundJobsTests
     {
         var opts = new DbContextOptionsBuilder<InventoryDbContext>()
             .UseInMemoryDatabase(name).Options;
-        return new InventoryDbContext(opts, _mediator.Object, Mock.Of<ITenantService>(), Mock.Of<Microsoft.FeatureManagement.IFeatureManager>());
+        return new InventoryDbContext(opts, _mediator.Object, Mock.Of<ITenantService>());
     }
 
     private static IssuesDbContext CreateIssuesDb(string name)
     {
         var opts = new DbContextOptionsBuilder<IssuesDbContext>()
             .UseInMemoryDatabase(name).Options;
-        return new IssuesDbContext(opts, _mediator.Object, Mock.Of<ITenantService>(), Mock.Of<Microsoft.FeatureManagement.IFeatureManager>());
+        return new IssuesDbContext(opts, _mediator.Object, Mock.Of<ITenantService>());
     }
 
     private static AuthDbContext CreateAuthDb(string name)

@@ -117,6 +117,35 @@ frontend/apps/next-shell/
 
 ---
 
+## 🔒 Multi-Tenancy Isolation (US-078/080) — Concluído
+
+### Problema raiz identificado e resolvido
+A falha de isolamento entre tenants (`Issues_BetaTenant_CanSeeOnlyBetaIssues`) foi causada por um **vazamento de cache cross-tenant** no `CachingBehavior<TRequest, TResponse>`.
+
+O `GetAllIssuesQuery` implementa `ICacheable` com prefixo `"issues-list"`. A chave de cache era gerada apenas com base nos parâmetros da requisição (paginação, filtros), **sem incluir o tenant**. O resultado do tenant Alpha era cacheado e devolvido ao tenant Beta quando os parâmetros eram idênticos.
+
+### Correção aplicada
+**`backend/src/Shared/Behaviors/CachingBehavior.cs`**
+- Injetado `ITenantService` (opcional, via DI)
+- Chave de cache agora tem formato: `{prefix}:{tenantId}:{sha256-hash}`
+- Fix é **global** — protege todos os módulos que usam `ICacheable` automaticamente
+
+### Outras correções de multi-tenancy nesta sessão
+| Componente | Correção |
+|---|---|
+| `InventoryReadRepositories.cs` | Dapper queries filtradas por `TenantId` via `ITenantService` |
+| `InventoryQueryHandlers.cs` | Cache keys manuais incluem `tenantId` |
+| `IssueQueryHandlers.cs` | `IgnoreQueryFilters()` + `WithTenantFilter(tenantService)` explícito |
+| `TenantAwareDbContext.cs` | `TenantModelCacheKeyFactory` para isolar modelos compilados por tenant |
+| `TenantQueryExtensions.cs` | Helper `WithTenantFilter<T>()` para aplicar WHERE por tenant em qualquer `IQueryable<ITenantEntity>` |
+| `CachingBehavior.cs` | **Fix final** — tenant ID incluído em TODAS as cache keys de `ICacheable` |
+
+### Resultado
+- **224/224 testes passando**, incluindo todos os 7 testes de `MultiTenancyRealIsolationTests`
+- Nenhuma regressão
+
+---
+
 ## ✅ Checklist antes de abrir PR
 
 - [ ] `npm run typecheck` passa sem erros

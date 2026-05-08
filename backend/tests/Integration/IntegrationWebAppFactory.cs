@@ -16,6 +16,7 @@ using IMS.Modular.Modules.InventoryIssues.Infrastructure;
 using IMS.Modular.Modules.Webhooks.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
 using IMS.Modular.Shared.Outbox;
+using IMS.Modular.Shared.MultiTenancy.TenantManagement;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using System.Net.Http.Json;
@@ -134,6 +135,8 @@ public class IntegrationWebAppFactory : WebApplicationFactory<Program>, IDisposa
             ReplaceDbContextWithSqlite<InventoryIssuesDbContext>(services, _sharedConnStr);
             ReplaceDbContextWithSqlite<OutboxDbContext>(services, _outboxConnStr);
             ReplaceDbContextWithSqlite<WebhooksDbContext>(services, _webhooksConnStr);
+            // US-080: TenantDbContext — disabled MT in integration tests
+            ReplaceDbContextWithSqlite<TenantDbContext>(services, _sharedConnStr);
 
             // Replace Dapper IDbConnection to use the Inventory SQLite file
             services.RemoveAll<IDbConnection>();
@@ -220,6 +223,7 @@ public class IntegrationWebAppFactory : WebApplicationFactory<Program>, IDisposa
         EnsureSchema<InventoryDbContext>(services);
         EnsureSchema<IssuesDbContext>(services);
         EnsureSchema<InventoryIssuesDbContext>(services);
+        EnsureSchema<TenantDbContext>(services);
         EnsureSchema<OutboxDbContext>(services);
         EnsureSchema<WebhooksDbContext>(services);
     }

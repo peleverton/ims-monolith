@@ -27,7 +27,7 @@ public class InventoryCommandHandlerTests : IDisposable
         var options = new DbContextOptionsBuilder<InventoryDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
-        _db = new InventoryDbContext(options, _mediator.Object, Mock.Of<ITenantService>(), Mock.Of<Microsoft.FeatureManagement.IFeatureManager>());
+        _db = new InventoryDbContext(options, _mediator.Object, Mock.Of<ITenantService>());
 
         // Cache mock: all operations are no-ops in unit tests
         _cache.Setup(c => c.RemoveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))

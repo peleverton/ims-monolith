@@ -27,6 +27,11 @@ public static class OpenTelemetryExtensions
         AppMeter.CreateHistogram<double>("ims.outbox.processing_duration_ms", "ms",
             "Duration of outbox processing cycles");
 
+    // US-080: Multi-tenancy — per-tenant request counter
+    private static readonly Counter<long> _tenantRequests =
+        AppMeter.CreateCounter<long>("ims.tenant.requests", "requests",
+            "HTTP requests broken down by tenant.id");
+
     /// <summary>Increments the domain events published counter.</summary>
     public static void RecordDomainEventPublished(string eventType)
         => _domainEventsPublished.Add(1, new KeyValuePair<string, object?>("event.type", eventType));
@@ -34,6 +39,13 @@ public static class OpenTelemetryExtensions
     /// <summary>Records outbox processing cycle duration in milliseconds.</summary>
     public static void RecordOutboxProcessingDuration(double milliseconds)
         => _outboxProcessingDuration.Record(milliseconds);
+
+    /// <summary>US-080: Increments per-tenant request counter.</summary>
+    public static void RecordTenantRequest(string tenantId, string method, int statusCode)
+        => _tenantRequests.Add(1,
+            new KeyValuePair<string, object?>("tenant.id", tenantId),
+            new KeyValuePair<string, object?>("http.method", method),
+            new KeyValuePair<string, object?>("http.status_code", statusCode));
 
     public static IServiceCollection AddImsOpenTelemetry(
         this IServiceCollection services,
@@ -74,6 +86,15 @@ public static class OpenTelemetryExtensions
                         {
                             if (request.Headers.TryGetValue("X-Correlation-Id", out var corrId))
                                 activity.SetTag("ims.correlation_id", corrId.ToString());
+                            // US-080: tag tenant.id from header (middleware may not have run yet)
+                            if (request.Headers.TryGetValue("X-Tenant-Id", out var tenantId))
+                                activity.SetTag("tenant.id", tenantId.ToString());
+                        };
+                        // US-080: record per-tenant metric on response
+                        options.EnrichWithHttpResponse = (activity, response) =>
+                        {
+                            var tenantId = activity.GetTagItem("tenant.id")?.ToString() ?? "default";
+                            RecordTenantRequest(tenantId, response.HttpContext.Request.Method, response.StatusCode);
                         };
                     })
                     .AddHttpClientInstrumentation(options => options.RecordException = true)

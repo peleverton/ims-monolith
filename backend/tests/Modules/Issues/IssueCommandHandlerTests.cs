@@ -28,7 +28,7 @@ public class IssueCommandHandlerTests : IDisposable
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
 
-        _db = new IssuesDbContext(options, _mediatorMock.Object, Mock.Of<ITenantService>(), Mock.Of<Microsoft.FeatureManagement.IFeatureManager>());
+        _db = new IssuesDbContext(options, _mediatorMock.Object, Mock.Of<ITenantService>());
 
         // Cache mock: RemoveByPrefixAsync is a no-op in unit tests
         _cacheMock

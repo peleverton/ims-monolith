@@ -4,6 +4,7 @@ using IMS.Modular.Modules.InventoryIssues.Application.Handlers;
 using IMS.Modular.Modules.InventoryIssues.Domain.Entities;
 using IMS.Modular.Modules.InventoryIssues.Domain.Enums;
 using IMS.Modular.Modules.InventoryIssues.Infrastructure;
+using IMS.Modular.Shared.MultiTenancy;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Moq;
@@ -26,7 +27,12 @@ public class InventoryIssueHandlerTests : IDisposable
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
 
-        _db = new InventoryIssuesDbContext(options, _mediatorMock.Object);
+        // US-080: supply stub for new TenantAwareDbContext dependency (MT disabled in unit tests)
+        var tenantService = new Mock<ITenantService>();
+        tenantService.Setup(t => t.TenantId).Returns((string?)null);
+        tenantService.Setup(t => t.IsMultiTenancyEnabled).Returns(false);
+
+        _db = new InventoryIssuesDbContext(options, _mediatorMock.Object, tenantService.Object);
         _repo = new InventoryIssueRepository(_db);
     }
 
