@@ -42,6 +42,15 @@ services:
       OpenTelemetry__OtlpEndpoint: ""
       Meilisearch__Host: "http://meilisearch:7700"
       Meilisearch__ApiKey: ${MEILISEARCH_MASTER_KEY:-}
+      # Outbox: polling agressivo para desenvolvimento/testes
+      Outbox__PollingIntervalSeconds: 1
+      Outbox__BatchSize: 50
+      # Rate limiting: limites elevados para load testing local
+      RateLimiting__Global__PermitLimit: 10000
+      RateLimiting__Global__WindowSeconds: 60
+      RateLimiting__Global__QueueLimit: 1000
+      RateLimiting__Auth__PermitLimit: 100
+      RateLimiting__Auth__WindowSeconds: 60
     depends_on:
       postgres:
         condition: service_healthy

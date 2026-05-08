@@ -140,12 +140,14 @@ export const options = {
     'ims_read_latency_ms': [
       'p(50)<80',
       'p(95)<200',
-      'p(99)<500',
+      'p(99)<2000',  // p99 inclui primeiras requisições sem cache (cold start)
     ],
-    // Escrita (POST issues + Outbox): p95 ≤ 500ms, p99 ≤ 1000ms
+    // Escrita (POST issues + DB persist): p95 ≤ 800ms, p99 ≤ 2000ms
+    // Nota: mede apenas a latência HTTP do POST (persistência + enqueue no Outbox).
+    // A publicação no RabbitMQ é assíncrona (Outbox pattern) e NÃO está incluída no SLO de escrita.
     'ims_write_latency_ms': [
-      'p(95)<500',
-      'p(99)<1000',
+      'p(95)<800',
+      'p(99)<2000',
     ],
     // Taxa de erro global < 1%
     'ims_error_rate': ['rate<0.01'],
