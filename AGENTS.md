@@ -11,29 +11,34 @@ Cada agente tem uma especialidade e ownership claro sobre um conjunto de USs.
 
 | Agente | Label | Especialidade | USs Ativas |
 |---|---|---|---|
-| **Morpheus** | `agent:morpheus` | Arquiteto / Lead — decisões cross-cutting, auth, i18n | US-037, US-042 |
-| **Neo** | `agent:neo` | Backend / Full-stack — BFF, integrações, módulos de negócio | US-038, US-039 |
-| **Trinity** | `agent:trinity` | UI / DX — theming, acessibilidade, user experience | US-040, US-041 |
+| **Morpheus** | `agent:morpheus` | Arquiteto / Lead — decisões cross-cutting, auth, compliance, infra | US-080 (#108), US-082 (#109), US-089 (#116) |
+| **Neo** | `agent:neo` | Backend / Full-stack — módulos de negócio, integrações, shared kernel | US-083 (#110), US-085 (#112), US-086 (#113), US-087 (#114), US-088 (#115) |
+| **Trinity** | `agent:trinity` | UI / DX — theming, acessibilidade, user experience, frontend | US-084 (#111) |
 
 ---
 
-## 📋 Fase 10 — Frontend Quality & Features
+## 📋 Sprint 13 — Production SaaS-ready (atual)
 
 ```
 Onda 1 (paralela — sem dependências entre si):
-├── Morpheus  → feat/US-037-auth-hardening          (#52) ✅ PR #59 mergeado
-├── Neo       → feat/US-038-inventory-crud-frontend  (#53) ✅ PR #61 mergeado
-└── Trinity   → feat/US-041-dark-mode               (#56) 🔄 em andamento
+├── Morpheus  → feat/US-080-multitenancy-production   (#108) 🔄 pronto para iniciar
+├── Morpheus  → feat/US-082-load-testing-k6           (#109) 🔄 pronto para iniciar
+└── Neo       → feat/US-083-audit-log                 (#110) 🔄 pronto para iniciar
 
-Onda 2 (paralela — inicia após Onda 1):
-├── Morpheus  → feat/US-042-i18n                    (#57) ✅ PR #60 mergeado
-├── Neo       → feat/US-039-signalr-notifications    (#54) 🔄 em andamento
-└── Trinity   → feat/US-040-user-management-frontend (#55) 🔄 em andamento
+Onda 2 (após Sprint 13):
+├── Trinity   → feat/US-084-pwa-offline               (#111) Sprint 14
+├── Neo       → feat/US-085-i18n-emails               (#112) Sprint 14
+└── Neo       → feat/US-086-hangfire-rbac-tenant      (#113) Sprint 14
+
+Sprint 15:
+├── Neo       → feat/US-087-cursor-pagination         (#114)
+├── Neo       → feat/US-088-meilisearch-reindex       (#115)
+└── Morpheus  → feat/US-089-lgpd-gdpr                 (#116)
 ```
 
-### Dependência crítica: `lib/api-client.ts`
-A **US-037** (Morpheus) cria o `api-client` com interceptor de refresh token.
-As USs da Onda 2 dependem desse client. **Regra:** não mergear Onda 2 antes de US-037.
+### Dependência crítica: US-080 → US-086
+A **US-086** (Hangfire RBAC tenant-aware) depende de US-080 estar em produção.
+**Regra:** não mergear US-086 antes de US-080 estar estável em staging.
 
 ---
 
@@ -41,12 +46,15 @@ As USs da Onda 2 dependem desse client. **Regra:** não mergear Onda 2 antes de 
 
 | Branch | Agente | Issue | Status |
 |---|---|---|---|
-| `feat/US-037-auth-hardening` | Morpheus | #52 | ✅ PR #59 mergeado |
-| `feat/US-038-inventory-crud-frontend` | Neo | #53 | ✅ PR #61 mergeado |
-| `feat/US-039-signalr-notifications` | Neo | #54 | 🔄 em andamento |
-| `feat/US-040-user-management-frontend` | Trinity | #55 | 🔄 em andamento |
-| `feat/US-041-dark-mode` | Trinity | #56 | 🔄 em andamento |
-| `feat/US-042-i18n` | Morpheus | #57 | ✅ PR #60 mergeado |
+| `feat/US-080-multitenancy-production` | Morpheus | #108 | 🔜 a iniciar |
+| `feat/US-082-load-testing-k6` | Morpheus | #109 | 🔜 a iniciar |
+| `feat/US-083-audit-log` | Neo | #110 | 🔜 a iniciar |
+| `feat/US-084-pwa-offline` | Trinity | #111 | 🔜 Sprint 14 |
+| `feat/US-085-i18n-emails` | Neo | #112 | � Sprint 14 |
+| `feat/US-086-hangfire-rbac-tenant` | Neo | #113 | 🔜 Sprint 14 |
+| `feat/US-087-cursor-pagination` | Neo | #114 | � Sprint 15 |
+| `feat/US-088-meilisearch-reindex` | Neo | #115 | � Sprint 15 |
+| `feat/US-089-lgpd-gdpr` | Morpheus | #116 | 🔜 Sprint 15 |
 
 ---
 
