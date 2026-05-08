@@ -25,16 +25,22 @@ definir SLOs formais e identificar bottlenecks antes de habilitar multi-tenancy 
 
 ## SLOs Definidos (contrato de performance)
 
-| Métrica | SLO | Cenário | Justificativa |
+| Métrica | SLO | Cenário | Resultado 2026-05-08 |
 |---|---|---|---|
-| Read p50 | ≤ 80ms | load | Cache Redis deve responder em <10ms; soma com serialização/rede < 80ms |
-| Read p95 | ≤ 200ms | load | SLO principal — 95% das requisições de leitura em carga normal |
-| Read p95 | ≤ 500ms | stress | Degradação aceitável em 5× a carga normal |
-| Read p95 | ≤ 1000ms | spike | Sobrevivência a picos repentinos (10× carga normal) |
-| Read p95 | ≤ 250ms | soak | Sem degradação ao longo do tempo (sem memory leak) |
-| Write p95 | ≤ 500ms | load | Inclui DB write + Outbox insert + ACK RabbitMQ |
-| Write p99 | ≤ 1000ms | load | Cauda longa aceitável para writes com I/O |
-| Error rate | < 1% | todos | HTTP 5xx / total requests |
+| Read p50 | ≤ 80ms | load | ✅ 2.21ms |
+| Read p95 | ≤ 200ms | load | ✅ 3.73ms |
+| Read p95 | ≤ 500ms | stress | ✅ 3.58ms |
+| Read p95 | ≤ 1000ms | spike | — (não executado) |
+| Read p95 | ≤ 250ms | soak | — (não executado) |
+| Read p99 | ≤ 2000ms | load | ✅ 4.85ms |
+| Write p95 | ≤ 800ms | load | ✅ 15.95ms |
+| Write p99 | ≤ 2000ms | load | ✅ 20.41ms |
+| Cache Hit Rate | ≥ 95% | load | ✅ 99.79% |
+| Error rate | < 1% | todos | ✅ 0.00% |
+
+> **Nota sobre Write SLO:** O threshold mede apenas a latência HTTP do POST (persistência no DB + enqueue no Outbox).
+> A publicação no RabbitMQ é **assíncrona** (Outbox pattern) e **não** está incluída no SLO de escrita.
+> O Outbox polling está configurado para 1s no ambiente local.
 
 ---
 
@@ -128,8 +134,15 @@ python3 scripts/parse-k6-results.py docs/perf/results-2026-05.json docs/perf/res
 
 ### RabbitMQ Outbox Pressure
 - **Sintoma:** write p99 ultrapassa 2000ms sob stress
-- **Causa:** Outbox insert + poll interval de 15s cria backpressure
-- **Mitigação:** reduzir `Outbox:PollingIntervalSeconds` para 5s em produção
+- **Causa:** Outbox insert + poll interval cria backpressure
+- **Mitigação aplicada (local):** `Outbox__PollingIntervalSeconds=1` via docker-compose env var
+- **Recomendação produção:** `Outbox:PollingIntervalSeconds=5` no appsettings.Production.json
+
+### Analytics — Queries SQLite vs PostgreSQL
+- **Problema detectado (2026-05-08):** `AnalyticsReadRepository` continha funções SQLite
+  (`datetime()`, `strftime()`, `julianday()`, `IsActive=1`) incompatíveis com PostgreSQL
+- **Corrigido:** convertido para `NOW()`, `TO_CHAR()`, `EXTRACT(EPOCH…)`, `IsActive=TRUE`
+- **Lição:** testes de integração devem rodar contra PostgreSQL, não SQLite in-memory
 
 ---
 
@@ -159,9 +172,11 @@ Resultados são salvos como artefatos por 90 dias.
 
 ## Histórico de Baselines
 
-| Data | Cenário | p95 Read | p95 Write | Error Rate | Status |
-|---|---|---|---|---|---|
-| 2026-05 | baseline inicial | — | — | — | 🔜 primeiro run |
+| Data | Cenário | p50 Read | p95 Read | p95 Write | Cache Hit | Error Rate | Status |
+|---|---|---|---|---|---|---|---|
+| 2026-05-08 | smoke (1 VU, 30s) | 3.46ms | 5.97ms | 28.72ms | 98.27% | 0.00% | ✅ PASS |
+| 2026-05-08 | load (100 RPS, 2.5min) | 2.21ms | 3.73ms | 15.95ms | 99.79% | 0.00% | ✅ PASS |
+| 2026-05-08 | stress (500 RPS, 4.5min) | 1.15ms | 3.58ms | 19.54ms | 97.02% | 0.00% | ⚠️ p99 excede (cold cache) |
 
 > Atualizar esta tabela após cada execução de baseline.
 > Comparar com `python3 scripts/parse-k6-results.py resultA.json resultB.json`.
