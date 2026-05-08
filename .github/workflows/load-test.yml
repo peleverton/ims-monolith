@@ -1,0 +1,125 @@
+name: Load Test Baseline (US-082)
+
+on:
+  # Executar mensalmente no primeiro dia do mês
+  schedule:
+    - cron: '0 3 1 * *'
+
+  # Executar manualmente via Actions UI
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: 'Cenário k6'
+        required: false
+        default: 'load'
+        type: choice
+        options: [smoke, load, stress, spike, soak, all]
+      base_url:
+        description: 'URL base da API'
+        required: false
+        default: 'http://localhost:8080'
+
+# Não executar em paralelo — evita ruído nos resultados
+concurrency:
+  group: load-test
+  cancel-in-progress: false
+
+jobs:
+  load-test:
+    name: k6 Load Test — ${{ github.event.inputs.scenario || 'load' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg \
+            --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" \
+            | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update -qq && sudo apt-get install -y k6
+
+      # Para testes locais no CI — sobe a aplicação em Docker
+      - name: Start application (smoke/load only in CI)
+        if: ${{ github.event.inputs.base_url == '' || github.event.inputs.base_url == 'http://localhost:8080' }}
+        run: |
+          docker compose -f docker-compose.dev.yml up -d --wait \
+            --wait-timeout 120 \
+            app postgres redis 2>/dev/null || echo "Docker Compose não disponível — assume API já está rodando"
+        continue-on-error: true
+
+      - name: Wait for API health
+        run: |
+          BASE_URL="${{ github.event.inputs.base_url || 'http://localhost:8080' }}"
+          for i in $(seq 1 30); do
+            if curl -sf "${BASE_URL}/health" --max-time 5 > /dev/null 2>&1; then
+              echo "✅ API disponível em ${BASE_URL}"
+              break
+            fi
+            echo "⏳ Aguardando API... tentativa ${i}/30"
+            sleep 5
+          done
+        continue-on-error: true
+
+      - name: Run k6 load test
+        env:
+          SCENARIO: ${{ github.event.inputs.scenario || 'load' }}
+          BASE_URL: ${{ github.event.inputs.base_url || 'http://localhost:8080' }}
+        run: |
+          DATE=$(date +%Y-%m-%d)
+          mkdir -p docs/perf
+          k6 run \
+            --env SCENARIO="${SCENARIO}" \
+            --env BASE_URL="${BASE_URL}" \
+            --out "json=docs/perf/results-${DATE}.json" \
+            scripts/load-test-baseline.js
+        continue-on-error: true  # não falha o CI — apenas registra
+
+      - name: Parse and display results
+        run: |
+          DATE=$(date +%Y-%m-%d)
+          if [ -f "docs/perf/results-${DATE}.json" ]; then
+            python3 scripts/parse-k6-results.py "docs/perf/results-${DATE}.json" 2>/dev/null || \
+              echo "Parser não disponível — ver artefatos JSON"
+          fi
+        continue-on-error: true
+
+      - name: Generate Markdown summary
+        run: |
+          DATE=$(date +%Y-%m-%d)
+          SCENARIO="${{ github.event.inputs.scenario || 'load' }}"
+          BASE_URL="${{ github.event.inputs.base_url || 'http://localhost:8080' }}"
+          bash scripts/run-load-tests.sh "${SCENARIO}" "${BASE_URL}" 2>/dev/null || \
+            echo "Summary script não disponível"
+        continue-on-error: true
+
+      - name: Upload results as artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: load-test-results-${{ github.run_id }}
+          path: docs/perf/
+          retention-days: 90
+
+      - name: Comment on PR (if triggered by PR)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        continue-on-error: true
+        with:
+          script: |
+            const date = new Date().toISOString().slice(0, 10);
+            const scenario = '${{ github.event.inputs.scenario || "load" }}';
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 📊 Load Test Results (US-082)\n\n` +
+                    `- **Cenário:** \`${scenario}\`\n` +
+                    `- **Data:** ${date}\n` +
+                    `- **Artefato:** ver [Actions artifacts](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})\n\n` +
+                    `> Ver \`docs/perf/summary-${date}.md\` para o relatório completo.`
+            });

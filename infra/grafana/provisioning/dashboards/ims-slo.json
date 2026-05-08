@@ -1,0 +1,289 @@
+{
+  "uid": "ims-slo-dashboard",
+  "title": "IMS — SLI/SLO Performance",
+  "description": "US-082: Load testing baseline — latência, error rate e throughput por endpoint",
+  "tags": ["ims", "slo", "performance", "k6"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "scenario",
+        "label": "Cenário",
+        "type": "custom",
+        "options": [
+          { "text": "Todos", "value": "" },
+          { "text": "smoke",  "value": "smoke"  },
+          { "text": "load",   "value": "load"   },
+          { "text": "stress", "value": "stress" },
+          { "text": "spike",  "value": "spike"  },
+          { "text": "soak",   "value": "soak"   }
+        ],
+        "current": { "text": "load", "value": "load" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Error Rate (SLO < 1%)",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.005 },
+              { "color": "red",    "value": 0.01  }
+            ]
+          },
+          "mappings": []
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(http_requests_received_total{status=~\"5..\"}[5m])) / sum(rate(http_requests_received_total[5m]))",
+          "legendFormat": "Error Rate"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Throughput (RPS)",
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue", "value": null }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(http_requests_received_total[1m]))",
+          "legendFormat": "RPS"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "p95 Latência (SLO ≤ 200ms)",
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green",  "value": null },
+              { "color": "yellow", "value": 150  },
+              { "color": "red",    "value": 200  }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) * 1000",
+          "legendFormat": "p95"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "p99 Latência (SLO ≤ 500ms)",
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green",  "value": null },
+              { "color": "yellow", "value": 350  },
+              { "color": "red",    "value": 500  }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) * 1000",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Latência por Percentil — Todos os Endpoints",
+      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": { "lineWidth": 2 },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red",   "value": 200  }
+            ]
+          }
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "p50" }, "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" }}]},
+          { "matcher": { "id": "byName", "options": "p95" }, "properties": [{ "id": "color", "value": { "fixedColor": "orange", "mode": "fixed" }}]},
+          { "matcher": { "id": "byName", "options": "p99" }, "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" }}]}
+        ]
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket[1m])) by (le)) * 1000",
+          "legendFormat": "p50"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[1m])) by (le)) * 1000",
+          "legendFormat": "p95"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[1m])) by (le)) * 1000",
+          "legendFormat": "p99"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Throughput & Error Rate",
+      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": { "custom": { "lineWidth": 2 } },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Error Rate" },
+            "properties": [
+              { "id": "unit",   "value": "percentunit" },
+              { "id": "color",  "value": { "fixedColor": "red", "mode": "fixed" } },
+              { "id": "custom.axisPlacement", "value": "right" }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "RPS" },
+            "properties": [{ "id": "unit", "value": "reqps" }]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(http_requests_received_total[1m]))",
+          "legendFormat": "RPS"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(http_requests_received_total{status=~\"5..\"}[1m])) / sum(rate(http_requests_received_total[1m]))",
+          "legendFormat": "Error Rate"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Latência p95 por Endpoint",
+      "gridPos": { "x": 0, "y": 12, "w": 24, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": { "lineWidth": 1 }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{route=~\"/api/issues.*\"}[2m])) by (le, route)) * 1000",
+          "legendFormat": "{{route}} p95"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{route=~\"/api/inventory.*\"}[2m])) by (le, route)) * 1000",
+          "legendFormat": "{{route}} p95"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{route=~\"/api/analytics.*\"}[2m])) by (le, route)) * 1000",
+          "legendFormat": "{{route}} p95"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "SLO Compliance — p95 vs Threshold (200ms)",
+      "description": "Verde = dentro do SLO. Vermelho = violação.",
+      "gridPos": { "x": 0, "y": 20, "w": 12, "h": 6 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green",  "value": null },
+              { "color": "red",    "value": 200  }
+            ]
+          },
+          "custom": { "thresholdsStyle": { "mode": "line+area" } }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[2m])) by (le)) * 1000",
+          "legendFormat": "p95 atual"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "table",
+      "title": "Top 10 Endpoints — p95 Latência (última 1h)",
+      "gridPos": { "x": 12, "y": 20, "w": 12, "h": 6 },
+      "options": { "sortBy": [{ "displayName": "p95 (ms)", "desc": true }] },
+      "fieldConfig": {
+        "defaults": { "unit": "ms" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "topk(10, histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[1h])) by (le, route)) * 1000)",
+          "legendFormat": "{{route}}",
+          "instant": true,
+          "format": "table"
+        }
+      ]
+    }
+  ]
+}
