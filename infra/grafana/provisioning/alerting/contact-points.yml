@@ -1,25 +1,21 @@
 apiVersion: 1
 
+# Contact points para alertas do Grafana.
+# Slack: configure GRAFANA_SLACK_WEBHOOK_URL no ambiente para ativar.
+# Em dev local, apenas o email (log) está ativo.
+
 contactPoints:
   - orgId: 1
-    name: IMS-Slack
+    name: IMS-Dev-Null
     receivers:
-      - uid: ims-slack-receiver
-        type: slack
-        settings:
-          url: ${GRAFANA_SLACK_WEBHOOK_URL:-https://hooks.slack.com/services/placeholder}
-          channel: "#ims-alerts"
-          title: "🚨 IMS Alert — {{ .CommonLabels.alertname }}"
-          text: "{{ range .Alerts }}*{{ .Annotations.summary }}*\n{{ .Annotations.description }}\n{{ end }}"
-        disableResolveMessage: false
-
-  - orgId: 1
-    name: IMS-Email
-    receivers:
-      - uid: ims-email-receiver
+      - uid: ims-devnull-receiver
         type: email
         settings:
-          addresses: ${GRAFANA_ALERT_EMAIL:-ops@ims.local}
-          subject: "[IMS] {{ .CommonLabels.alertname }}"
-          message: "{{ range .Alerts }}{{ .Annotations.summary }}\n{{ .Annotations.description }}{{ end }}"
+          addresses: "dev@ims.local"
+          subject: "[IMS-DEV] {{ .CommonLabels.alertname }}"
+          message: |
+            {{ range .Alerts }}
+            Summary: {{ .Annotations.summary }}
+            Description: {{ .Annotations.description }}
+            {{ end }}
         disableResolveMessage: false
