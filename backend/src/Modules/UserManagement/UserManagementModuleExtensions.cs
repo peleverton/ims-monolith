@@ -1,5 +1,7 @@
 using IMS.Modular.Modules.UserManagement.Application.Validators;
 using IMS.Modular.Modules.UserManagement.Infrastructure;
+using IMS.Modular.Shared.Abstractions;
+using IMS.Modular.Shared.Email;
 using FluentValidation;
 
 namespace IMS.Modular.Modules.UserManagement;
@@ -15,9 +17,16 @@ public static class UserManagementModuleExtensions
         // Repository — wraps AuthDbContext, registered by AddAuthModule
         services.AddScoped<IUserManagementRepository, UserManagementRepository>();
 
+        // US-089: LGPD/GDPR repository (crosses module DB boundaries by design)
+        services.AddScoped<IGdprRepository, GdprRepository>();
+
+        // US-089: Email service — log-based for dev/test; swap for SMTP in production
+        services.AddScoped<IEmailService, LogEmailService>();
+
         // Validators
         services.AddValidatorsFromAssemblyContaining<UpdateProfileRequestValidator>();
 
         return services;
     }
 }
+

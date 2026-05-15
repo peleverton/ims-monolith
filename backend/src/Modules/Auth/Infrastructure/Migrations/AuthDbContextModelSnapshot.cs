@@ -17,6 +17,44 @@ namespace IMS.Modular.Modules.Auth.Infrastructure.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.15");
 
+            modelBuilder.Entity("IMS.Modular.Modules.Auth.Domain.Entities.DeleteRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("CancelledByAdminId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ExecutedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("RequestedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ScheduledHardDeleteAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("Status", "ScheduledHardDeleteAt");
+
+                    b.ToTable("DeleteRequests");
+                });
+
             modelBuilder.Entity("IMS.Modular.Modules.Auth.Domain.Entities.RefreshToken", b =>
                 {
                     b.Property<Guid>("Id")

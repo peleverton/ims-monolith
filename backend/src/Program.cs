@@ -286,6 +286,8 @@ app.MapGet("/api/status", () => Results.Ok(new
 AuthModule.Map(app);
 // US-064: New UserManagement module at /api/users (replaces /api/admin/users)
 UserManagementModule.Map(app);
+// US-089: LGPD/GDPR endpoints
+GdprModule.Map(app);
 // Kept for backward compatibility — deprecated, will be removed in Sprint 14
 UserAdminModule.Map(app);
 IssuesModule.Map(app);

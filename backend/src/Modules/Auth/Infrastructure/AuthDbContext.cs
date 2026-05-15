@@ -1,6 +1,7 @@
 using IMS.Modular.Modules.Auth.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace IMS.Modular.Modules.Auth.Infrastructure;
 
@@ -11,6 +12,8 @@ public class AuthDbContext(DbContextOptions<AuthDbContext> options) : DbContext(
     public DbSet<UserRole> UserRoles => Set<UserRole>();
     // US-055: Rotatable refresh tokens
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    // US-089: LGPD/GDPR delete requests
+    public DbSet<DeleteRequest> DeleteRequests => Set<DeleteRequest>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -101,5 +104,17 @@ public class AuthDbContext(DbContextOptions<AuthDbContext> options) : DbContext(
 
         modelBuilder.Entity<UserRole>().HasData(
             new UserRole { UserId = adminUserId, RoleId = adminRoleId, AssignedAt = seedTimestamp });
+
+        // US-089: LGPD/GDPR delete requests
+        modelBuilder.Entity<DeleteRequest>(entity =>
+        {
+            entity.ToTable("DeleteRequests");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Status)
+                  .HasConversion(new EnumToStringConverter<DeleteRequestStatus>())
+                  .HasMaxLength(20);
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => new { e.Status, e.ScheduledHardDeleteAt });
+        });
     }
 }
