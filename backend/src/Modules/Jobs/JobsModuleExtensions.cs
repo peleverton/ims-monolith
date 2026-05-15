@@ -24,6 +24,7 @@ public static class JobsModuleExtensions
         services.AddScoped<OverdueIssuesJob>();
         services.AddScoped<AnalyticsSnapshotJob>();
         services.AddScoped<TokenCleanupJob>();
+        services.AddScoped<GdprHardDeleteJob>();
 
         // Configurar Hangfire storage
         services.AddHangfire(config =>
@@ -87,6 +88,11 @@ public static class JobsModuleExtensions
             "token-cleanup",
             job => job.ExecuteAsync(),
             "0 2 * * *"); // diariamente às 02:00 UTC
+
+        manager.AddOrUpdate<GdprHardDeleteJob>(
+            "gdpr-hard-delete",
+            job => job.ExecuteAsync(),
+            "0 3 * * *"); // diariamente às 03:00 UTC
     }
 }
 
