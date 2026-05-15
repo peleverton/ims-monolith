@@ -46,3 +46,5 @@ frontend/apps/next-shell/.env.local
 frontend/apps/blazor-modules/bin/
 frontend/apps/blazor-modules/obj/
 frontend/apps/blazor-modules/wwwroot/_framework/
+docs/perf/results-*.json
+docs/perf/*.json
