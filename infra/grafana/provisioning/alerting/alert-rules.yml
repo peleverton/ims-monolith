@@ -244,3 +244,97 @@ groups:
         labels:
           severity: critical
           team: infra
+
+  # ── US-080: Multi-Tenancy Alerts ─────────────────────────────────────────────
+  - orgId: 1
+    name: IMS Multi-Tenancy Alerts
+    folder: IMS
+    interval: 1m
+    rules:
+      - uid: ims-tenant-high-error-rate
+        title: Tenant High 5xx Error Rate
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: |
+                sum by (tenant_id) (rate(ims_tenant_requests_total{http_status_code=~"5.."}[2m]))
+                /
+                sum by (tenant_id) (rate(ims_tenant_requests_total[2m])) > 0.05
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: "__expr__"
+            model:
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: [A]
+                  reducer:
+                    type: last
+              refId: C
+              type: classic_conditions
+        noDataState: NoData
+        execErrState: Error
+        for: 2m
+        annotations:
+          summary: "Tenant com alta taxa de erros 5xx"
+          description: "Tenant {{ $labels.tenant_id }} com >5% de requisições retornando 5xx nos últimos 2 minutos."
+        labels:
+          severity: warning
+          team: backend
+
+      - uid: ims-tenant-no-traffic
+        title: Active Tenant with No Traffic
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 900
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: |
+                sum by (tenant_id) (rate(ims_tenant_requests_total[15m])) == 0
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 900
+              to: 0
+            datasourceUid: "__expr__"
+            model:
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: [A]
+                  reducer:
+                    type: last
+              refId: C
+              type: classic_conditions
+        noDataState: NoData
+        execErrState: Error
+        for: 15m
+        annotations:
+          summary: "Tenant sem tráfego há 15 minutos"
+          description: "Tenant {{ $labels.tenant_id }} não registra requisições nos últimos 15 minutos."
+        labels:
+          severity: info
+          team: backend

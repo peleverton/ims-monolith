@@ -34,4 +34,9 @@
     <ProjectReference Include="..\src\ims-monolith.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- US-080: Disable parallel test collection execution to prevent WebApplicationFactory conflicts -->
+    <EmbeddedResource Include="xunit.runner.json" />
+  </ItemGroup>
+
 </Project>

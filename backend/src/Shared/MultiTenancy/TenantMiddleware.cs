@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using IMS.Modular.Shared.MultiTenancy.TenantManagement;
+using IMS.Modular.Shared.Observability;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.FeatureManagement;
@@ -65,6 +66,14 @@ public class TenantMiddleware(RequestDelegate next)
 
         // US-080: Tag OpenTelemetry Activity for trace-per-tenant observability.
         Activity.Current?.SetTag("tenant.id", tenantId);
+
+        // US-080: Record per-tenant Prometheus counter after response completes.
+        context.Response.OnCompleted(() =>
+        {
+            OpenTelemetryExtensions.RecordTenantRequest(
+                tenantId, context.Request.Method, context.Response.StatusCode);
+            return Task.CompletedTask;
+        });
 
         await next(context);
     }
