@@ -1,6 +1,6 @@
 using IMS.Modular.Modules.Inventory.Application.DTOs;
 using IMS.Modular.Modules.Inventory.Domain.Enums;
-using IMS.Modular.Shared.Domain;
+using IMS.Modular.Shared.Common;
 using MediatR;
 
 namespace IMS.Modular.Modules.Inventory.Application.Queries;
@@ -18,6 +18,14 @@ public record GetProductsQuery(
     Guid? LocationId = null,
     Guid? SupplierId = null,
     string? Search = null) : IRequest<PagedResult<ProductListDto>>;
+
+/// <summary>US-087: Cursor-based pagination for products.</summary>
+public record GetProductsCursorQuery(
+    string? Cursor = null,
+    int PageSize = 10,
+    ProductCategory? Category = null,
+    StockStatus? StockStatus = null,
+    string? Search = null) : IRequest<CursorPagedResult<ProductListDto>>;
 
 // ── Stock Movement Queries ────────────────────────────────────────────────
 

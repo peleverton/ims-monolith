@@ -2,10 +2,12 @@ using IMS.Modular.Modules.Inventory.Application.DTOs;
 using IMS.Modular.Modules.Inventory.Application.Mappings;
 using IMS.Modular.Modules.Inventory.Application.Queries;
 using IMS.Modular.Modules.Inventory.Domain;
+using IMS.Modular.Modules.Inventory.Infrastructure;
 using IMS.Modular.Shared.Abstractions;
-using IMS.Modular.Shared.Domain;
+using IMS.Modular.Shared.Common;
 using IMS.Modular.Shared.MultiTenancy;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace IMS.Modular.Modules.Inventory.Application.Handlers;
 
@@ -142,5 +144,62 @@ public sealed class GetLocationsQueryHandler(ILocationReadRepository repo)
         return new PagedResult<LocationListDto>(
             paged.Items.Select(InventoryMapper.FromSummaryDto).ToList(),
             paged.TotalCount, paged.Page, paged.PageSize);
+    }
+}
+
+// ── US-087: Cursor-based Pagination for Products ─────────────────────────
+
+public sealed class GetProductsCursorQueryHandler(
+    InventoryDbContext db,
+    ITenantService tenantService)
+    : IRequestHandler<GetProductsCursorQuery, CursorPagedResult<ProductListDto>>
+{
+    public async Task<CursorPagedResult<ProductListDto>> Handle(GetProductsCursorQuery request, CancellationToken ct)
+    {
+        var query = db.Products
+            .IgnoreQueryFilters()
+            .WithTenantFilter(tenantService)
+            .AsNoTracking()
+            .Where(p => p.IsActive)
+            .AsQueryable();
+
+        if (request.Category.HasValue)
+            query = query.Where(p => p.Category == request.Category.Value);
+
+        if (request.StockStatus.HasValue)
+            query = query.Where(p => p.StockStatus == request.StockStatus.Value);
+
+        if (!string.IsNullOrWhiteSpace(request.Search))
+        {
+            var term = request.Search.ToLower();
+            query = query.Where(p => p.Name.ToLower().Contains(term) || p.SKU.ToLower().Contains(term));
+        }
+
+        // Apply cursor
+        var cursorData = CursorEncoder.Decode(request.Cursor);
+        if (cursorData.HasValue)
+        {
+            var (cursorCreatedAt, cursorId) = cursorData.Value;
+            query = query.Where(p =>
+                p.CreatedAt < cursorCreatedAt ||
+                (p.CreatedAt == cursorCreatedAt && p.Id.CompareTo(cursorId) > 0));
+        }
+
+        // Deterministic ordering: CreatedAt DESC, Id ASC
+        var ordered = query.OrderByDescending(p => p.CreatedAt).ThenBy(p => p.Id);
+
+        var paged = await ordered.ToKeysetPagedAsync(
+            request.Cursor,
+            request.PageSize,
+            p => p.CreatedAt,
+            p => p.Id,
+            ct);
+
+        var dtos = paged.Items.Select(p => new ProductListDto(
+            p.Id, p.Name, p.SKU, p.Category.ToString(),
+            p.CurrentStock, p.UnitPrice, p.StockStatus.ToString(),
+            p.IsActive, p.CreatedAt)).ToList();
+
+        return new CursorPagedResult<ProductListDto>(dtos, paged.NextCursor, paged.HasMore);
     }
 }

@@ -1,4 +1,5 @@
 using FluentValidation;
+using IMS.Modular.Modules.Audit.Application;
 using IMS.Modular.Modules.Auth.Application.DTOs;
 using IMS.Modular.Modules.Auth.Application.Services;
 using IMS.Modular.Shared.Abstractions;
@@ -29,6 +30,8 @@ public class AuthModule : IEndpointModule
         LoginRequest request,
         IValidator<LoginRequest> validator,
         IAuthenticationService authService,
+        IAuditService auditService,
+        HttpContext httpContext,
         ILogger<AuthModule> logger)
     {
         var validation = await validator.ValidateAsync(request);
@@ -38,13 +41,20 @@ public class AuthModule : IEndpointModule
         logger.LogInformation("Login attempt for user: {Username}", request.Username);
 
         var result = await authService.LoginAsync(request);
+        var ip = httpContext.Connection.RemoteIpAddress?.ToString();
+
         if (result is null)
         {
             logger.LogWarning("Failed login attempt for user: {Username}", request.Username);
+            await auditService.LogAsync(AuditActions.Login, entityType: "User",
+                newValue: $"Failed login for '{request.Username}'", ipAddress: ip);
             return Results.Unauthorized();
         }
 
         logger.LogInformation("User {Username} logged in successfully", request.Username);
+        await auditService.LogAsync(AuditActions.Login, userId: result.UserId,
+            entityType: "User", entityId: result.UserId.ToString(),
+            newValue: request.Username, ipAddress: ip);
         return Results.Ok(result);
     }
 
@@ -52,6 +62,8 @@ public class AuthModule : IEndpointModule
         RegisterRequest request,
         IValidator<RegisterRequest> validator,
         IAuthenticationService authService,
+        IAuditService auditService,
+        HttpContext httpContext,
         ILogger<AuthModule> logger)
     {
         var validation = await validator.ValidateAsync(request);
@@ -66,6 +78,11 @@ public class AuthModule : IEndpointModule
             logger.LogWarning("Failed registration for user: {Username}", request.Username);
             return Results.BadRequest(new { message = "Username or email already exists" });
         }
+
+        var ip = httpContext.Connection.RemoteIpAddress?.ToString();
+        await auditService.LogAsync(AuditActions.UserCreated, userId: result.UserId,
+            entityType: "User", entityId: result.UserId.ToString(),
+            newValue: $"{request.Username} ({request.Email})", ipAddress: ip);
 
         logger.LogInformation("User {Username} registered successfully", request.Username);
         return Results.Ok(result);
@@ -117,6 +134,9 @@ public class AuthModule : IEndpointModule
     private static async Task<IResult> Logout(
         RefreshTokenRequest request,
         IAuthenticationService authService,
+        IAuditService auditService,
+        ClaimsPrincipal user,
+        HttpContext httpContext,
         ILogger<AuthModule> logger)
     {
         var revoked = await authService.LogoutAsync(request.RefreshToken);
@@ -125,6 +145,12 @@ public class AuthModule : IEndpointModule
             logger.LogWarning("Logout attempted with invalid or already-revoked refresh token");
             return Results.BadRequest(new { message = "Invalid or already-revoked refresh token" });
         }
+
+        var callerClaim = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier) ?? user.FindFirst("sub");
+        Guid? callerId = callerClaim is not null && Guid.TryParse(callerClaim.Value, out var cid) ? cid : null;
+        var ip = httpContext.Connection.RemoteIpAddress?.ToString();
+        await auditService.LogAsync(AuditActions.Logout, userId: callerId,
+            entityType: "User", entityId: callerId?.ToString(), ipAddress: ip);
 
         logger.LogInformation("User logged out — refresh token revoked");
         return Results.Ok(new { message = "Logged out successfully" });

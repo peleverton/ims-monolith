@@ -21,6 +21,14 @@ public record GetAllIssuesQuery(
     public TimeSpan? CacheDuration => TimeSpan.FromMinutes(2);
 }
 
+/// <summary>US-087: Cursor-based pagination query for issues.</summary>
+public record GetAllIssuesCursorQuery(
+    string? Cursor = null,
+    int PageSize = 10,
+    IssueStatus? Status = null,
+    IssuePriority? Priority = null,
+    string? SearchTerm = null) : IRequest<CursorPagedResult<IssueDto>>;
+
 public record GetIssuesByStatusQuery(
     IssueStatus Status,
     int PageNumber = 1,

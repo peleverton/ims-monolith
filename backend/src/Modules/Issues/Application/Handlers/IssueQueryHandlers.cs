@@ -1,6 +1,7 @@
 using IMS.Modular.Modules.Issues.Application.DTOs;
 using IMS.Modular.Modules.Issues.Application.Mappings;
 using IMS.Modular.Modules.Issues.Application.Queries;
+using IMS.Modular.Modules.Issues.Domain.Entities;
 using IMS.Modular.Modules.Issues.Infrastructure;
 using IMS.Modular.Shared.Common;
 using IMS.Modular.Shared.MultiTenancy;
@@ -142,5 +143,57 @@ public sealed class GetUserIssuesQueryHandler(IssuesDbContext db, ITenantService
         return new PagedResult<IssueDto>(
             paged.Items.Select(IssueMapper.ToDto).ToList(),
             paged.TotalCount, paged.PageNumber, paged.PageSize);
+    }
+}
+
+/// <summary>US-087: Cursor-based (keyset) pagination handler for Issues.</summary>
+public sealed class GetAllIssuesCursorQueryHandler(IssuesDbContext db, ITenantService tenantService)
+    : IRequestHandler<GetAllIssuesCursorQuery, CursorPagedResult<IssueDto>>
+{
+    public async Task<CursorPagedResult<IssueDto>> Handle(GetAllIssuesCursorQuery request, CancellationToken ct)
+    {
+        var query = db.Issues
+            .IgnoreQueryFilters()
+            .WithTenantFilter(tenantService)
+            .Include(i => i.Comments).Include(i => i.Activities).Include(i => i.Tags)
+            .AsNoTracking()
+            .AsQueryable();
+
+        if (request.Status.HasValue)
+            query = query.Where(i => i.Status == request.Status.Value);
+
+        if (request.Priority.HasValue)
+            query = query.Where(i => i.Priority == request.Priority.Value);
+
+        if (!string.IsNullOrWhiteSpace(request.SearchTerm))
+        {
+            var term = request.SearchTerm.ToLower();
+            query = query.Where(i =>
+                i.Title.ToLower().Contains(term) ||
+                i.Description.ToLower().Contains(term));
+        }
+
+        // Deterministic ordering: CreatedAt DESC, Id ASC
+        var ordered = query.OrderByDescending(i => i.CreatedAt).ThenBy(i => i.Id);
+
+        // Apply cursor: skip records at or before the cursor position
+        var cursorData = CursorEncoder.Decode(request.Cursor);
+        IQueryable<Issue> filtered = cursorData.HasValue
+            ? ordered.Where(i =>
+                i.CreatedAt < cursorData.Value.CreatedAt ||
+                (i.CreatedAt == cursorData.Value.CreatedAt && i.Id.CompareTo(cursorData.Value.Id) > 0))
+            : ordered;
+
+        var paged = await filtered.ToKeysetPagedAsync(
+            request.Cursor,
+            request.PageSize,
+            i => i.CreatedAt,
+            i => i.Id,
+            ct);
+
+        return new CursorPagedResult<IssueDto>(
+            paged.Items.Select(IssueMapper.ToDto).ToList(),
+            paged.NextCursor,
+            paged.HasMore);
     }
 }

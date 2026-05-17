@@ -51,6 +51,8 @@ public class InventoryDbContext(
             entity.HasIndex(e => e.SupplierId);
             entity.HasIndex(e => e.IsActive);
             entity.HasIndex(e => e.TenantId);
+            // US-087: Composite index for cursor (keyset) pagination
+            entity.HasIndex(e => new { e.CreatedAt, e.Id });
             entity.Ignore(e => e.DomainEvents);
         });
 

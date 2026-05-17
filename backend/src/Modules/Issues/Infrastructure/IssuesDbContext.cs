@@ -37,6 +37,8 @@ public class IssuesDbContext(
             entity.HasIndex(e => e.AssigneeId);
             entity.HasIndex(e => e.ReporterId);
             entity.HasIndex(e => e.TenantId);
+            // US-087: Composite index for cursor (keyset) pagination
+            entity.HasIndex(e => new { e.CreatedAt, e.Id });
 
             entity.OwnsMany(e => e.Comments, comment =>
             {

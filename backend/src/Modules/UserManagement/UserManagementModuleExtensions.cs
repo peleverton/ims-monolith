@@ -23,6 +23,9 @@ public static class UserManagementModuleExtensions
         // US-089: Email service — log-based for dev/test; swap for SMTP in production
         services.AddScoped<IEmailService, LogEmailService>();
 
+        // US-085: Localized email template service
+        services.AddSingleton<IEmailTemplateService, LocalizedEmailTemplateService>();
+
         // Validators
         services.AddValidatorsFromAssemblyContaining<UpdateProfileRequestValidator>();
 

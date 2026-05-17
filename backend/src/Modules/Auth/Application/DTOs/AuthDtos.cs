@@ -12,7 +12,8 @@ public record AuthenticationResponse(
     DateTime ExpiresAt,
     string Username,
     string Email,
-    string[] Roles);
+    string[] Roles,
+    Guid UserId = default);
 
 public record UserInfoResponse(
     string Id,

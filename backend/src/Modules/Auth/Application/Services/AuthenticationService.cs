@@ -99,7 +99,7 @@ public sealed class AuthenticationService(AuthDbContext db, JwtTokenService jwtT
         return new AuthenticationResponse(
             accessToken, newRawToken,
             jwtTokenService.GetAccessTokenExpiration(),
-            user.Username, user.Email, roles);
+            user.Username, user.Email, roles, user.Id);
     }
 
     /// <summary>US-055: Revoke token on explicit logout.</summary>
@@ -156,7 +156,7 @@ public sealed class AuthenticationService(AuthDbContext db, JwtTokenService jwtT
         return new AuthenticationResponse(
             accessToken, rawRefresh,
             jwtTokenService.GetAccessTokenExpiration(),
-            user.Username, user.Email, roles);
+            user.Username, user.Email, roles, user.Id);
     }
 
     private static (string raw, string hash) GenerateRefreshTokenWithHash()
