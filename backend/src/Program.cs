@@ -5,6 +5,7 @@ using IMS.Modular.Shared.MultiTenancy.TenantManagement;
 using FluentValidation;
 using IMS.Modular.Modules.Analytics;
 using IMS.Modular.Modules.Analytics.Api;
+using IMS.Modular.Modules.Audit;
 using IMS.Modular.Modules.Auth;
 using IMS.Modular.Modules.Auth.Api;
 using IMS.Modular.Modules.Features.Api;
@@ -165,6 +166,9 @@ builder.Services.AddMultiTenancy();
 // US-080: Tenant catalog (Tenants table + CRUD API)
 builder.Services.AddTenantManagement(builder.Configuration);
 
+// US-083: Audit Log
+builder.Services.AddAuditModule(builder.Configuration, builder.Environment);
+
 // US-071: Full-text Search (Meilisearch)
 builder.Services.AddSearchModule(builder.Configuration);
 
@@ -301,6 +305,9 @@ FeaturesModule.Map(app);
 // US-080: Tenant management API
 TenantEndpoints.Map(app);
 
+// US-083: Audit log API
+app.MapAuditModule();
+
 // SignalR hub
 app.MapHub<NotificationsHub>("/hubs/notifications").AllowAnonymous();
 
@@ -317,6 +324,7 @@ if (await featureManager.IsEnabledAsync("UseIssuesMicroservice"))
 
 try
 {
+    await app.Services.InitializeAuditModuleAsync();
     await app.Services.InitializeOutboxAsync();
     await app.Services.InitializeTenantDbAsync();           // US-080
     await app.Services.InitializeAuthModuleAsync();

@@ -1,4 +1,5 @@
 using FluentAssertions;
+using IMS.Modular.Modules.Audit.Application;
 using IMS.Modular.Modules.Auth.Domain.Entities;
 using IMS.Modular.Modules.Auth.Infrastructure;
 using IMS.Modular.Modules.UserManagement.Application.Commands;
@@ -6,6 +7,7 @@ using IMS.Modular.Modules.UserManagement.Application.Handlers;
 using IMS.Modular.Modules.UserManagement.Application.Queries;
 using IMS.Modular.Modules.UserManagement.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using NSubstitute;
 using Xunit;
 
 namespace IMS.Modular.Tests.Modules.UserManagement;
@@ -157,7 +159,7 @@ public class UserManagementHandlerTests : IDisposable
     [Fact]
     public async Task ChangeRole_Valid_ReturnsTrue()
     {
-        var handler = new ChangeUserRoleHandler(_repo);
+        var handler = new ChangeUserRoleHandler(_repo, Substitute.For<IAuditService>());
         var ok = await handler.Handle(new ChangeUserRoleCommand(UserId1, "Admin"), default);
 
         ok.Should().BeTrue();
@@ -169,7 +171,7 @@ public class UserManagementHandlerTests : IDisposable
     [Fact]
     public async Task ChangeRole_InvalidRole_ReturnsFalse()
     {
-        var handler = new ChangeUserRoleHandler(_repo);
+        var handler = new ChangeUserRoleHandler(_repo, Substitute.For<IAuditService>());
         var ok = await handler.Handle(new ChangeUserRoleCommand(UserId1, "SuperAdmin"), default);
 
         ok.Should().BeFalse();

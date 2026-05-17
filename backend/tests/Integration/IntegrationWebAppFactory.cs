@@ -24,6 +24,7 @@ using System.Text.Json;
 using System.Data;
 using Microsoft.Data.Sqlite;
 using Microsoft.FeatureManagement;
+using IMS.Modular.Modules.Audit.Infrastructure;
 
 namespace IMS.Modular.Tests.Integration;
 
@@ -137,6 +138,8 @@ public class IntegrationWebAppFactory : WebApplicationFactory<Program>, IDisposa
             ReplaceDbContextWithSqlite<WebhooksDbContext>(services, _webhooksConnStr);
             // US-080: TenantDbContext — disabled MT in integration tests
             ReplaceDbContextWithSqlite<TenantDbContext>(services, _sharedConnStr);
+            // US-083: AuditDbContext
+            ReplaceDbContextWithSqlite<AuditDbContext>(services, _sharedConnStr);
 
             // Replace Dapper IDbConnection to use the Inventory SQLite file
             services.RemoveAll<IDbConnection>();
@@ -226,6 +229,7 @@ public class IntegrationWebAppFactory : WebApplicationFactory<Program>, IDisposa
         EnsureSchema<TenantDbContext>(services);
         EnsureSchema<OutboxDbContext>(services);
         EnsureSchema<WebhooksDbContext>(services);
+        EnsureSchema<AuditDbContext>(services);
     }
 
     private static void EnsureSchema<TContext>(IServiceProvider services) where TContext : DbContext

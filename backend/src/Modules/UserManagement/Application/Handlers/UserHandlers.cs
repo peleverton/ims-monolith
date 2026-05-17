@@ -1,3 +1,4 @@
+using IMS.Modular.Modules.Audit.Application;
 using IMS.Modular.Modules.UserManagement.Application.Commands;
 using IMS.Modular.Modules.UserManagement.Application.DTOs;
 using IMS.Modular.Modules.UserManagement.Application.Queries;
@@ -42,11 +43,18 @@ public sealed class UpdateProfileHandler(IUserManagementRepository repo)
         => repo.UpdateProfileAsync(cmd.UserId, cmd.FullName, cmd.Email, ct);
 }
 
-public sealed class ChangeUserRoleHandler(IUserManagementRepository repo)
+public sealed class ChangeUserRoleHandler(IUserManagementRepository repo, IAuditService auditService)
     : IRequestHandler<ChangeUserRoleCommand, bool>
 {
-    public Task<bool> Handle(ChangeUserRoleCommand cmd, CancellationToken ct)
-        => repo.ChangeRoleAsync(cmd.UserId, cmd.RoleName, ct);
+    public async Task<bool> Handle(ChangeUserRoleCommand cmd, CancellationToken ct)
+    {
+        var result = await repo.ChangeRoleAsync(cmd.UserId, cmd.RoleName, ct);
+        if (result)
+            await auditService.LogAsync(AuditActions.RoleAssigned,
+                entityType: "User", entityId: cmd.UserId.ToString(),
+                newValue: cmd.RoleName, ct: ct);
+        return result;
+    }
 }
 
 public sealed class SetUserActiveHandler(IUserManagementRepository repo)

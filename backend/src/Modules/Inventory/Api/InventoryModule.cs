@@ -59,6 +59,8 @@ public class InventoryModule : IEndpointModule
         [FromQuery] Guid? locationId = null,
         [FromQuery] Guid? supplierId = null,
         [FromQuery] string? search = null,
+        [FromQuery] string paginationType = "offset",
+        [FromQuery] string? cursor = null,
         CancellationToken ct = default)
     {
         ProductCategory? categoryEnum = null;
@@ -68,6 +70,13 @@ public class InventoryModule : IEndpointModule
         StockStatus? stockStatusEnum = null;
         if (!string.IsNullOrEmpty(stockStatus) && Enum.TryParse<StockStatus>(stockStatus, true, out var ss))
             stockStatusEnum = ss;
+
+        // US-087: cursor-based pagination when requested
+        if (paginationType.Equals("cursor", StringComparison.OrdinalIgnoreCase))
+        {
+            var cursorQuery = new GetProductsCursorQuery(cursor, pageSize, categoryEnum, stockStatusEnum, search);
+            return Results.Ok(await mediator.Send(cursorQuery, ct));
+        }
 
         var query = new GetProductsQuery(page, pageSize, categoryEnum, stockStatusEnum, locationId, supplierId, search);
         return Results.Ok(await mediator.Send(query, ct));

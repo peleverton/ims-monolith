@@ -3,7 +3,7 @@ using Hangfire.Dashboard;
 using Hangfire.InMemory;
 using Hangfire.PostgreSql;
 using IMS.Modular.Shared.Abstractions;
-using Microsoft.AspNetCore.Authorization;
+using IMS.Modular.Shared.MultiTenancy;
 
 namespace IMS.Modular.Modules.Jobs;
 
@@ -11,6 +11,7 @@ namespace IMS.Modular.Modules.Jobs;
 /// US-067: Background Jobs com Hangfire.
 /// - Development: storage InMemory (zero infra)
 /// - Production: storage PostgreSQL (persistência, retry automático)
+/// US-086: Tenant-aware dashboard filter and global job filter added.
 /// </summary>
 public static class JobsModuleExtensions
 {
@@ -25,6 +26,9 @@ public static class JobsModuleExtensions
         services.AddScoped<AnalyticsSnapshotJob>();
         services.AddScoped<TokenCleanupJob>();
         services.AddScoped<GdprHardDeleteJob>();
+        services.AddScoped<AuditLogRetentionJob>();
+        // US-088: Meilisearch reindex job
+        services.AddScoped<MeilisearchReindexJob>();
 
         // Configurar Hangfire storage
         services.AddHangfire(config =>
@@ -53,18 +57,27 @@ public static class JobsModuleExtensions
             opt.Queues = ["default", "critical"];
         });
 
+        // US-086: Register tenant job filter so all enqueued jobs carry their tenant tag
+        services.AddSingleton<TenantJobFilter>();
+
         return services;
     }
 
     public static void UseJobsModule(this WebApplication app)
     {
-        // Dashboard Hangfire — apenas Admin (policy CanManageUsers)
+        var tenantService = app.Services.GetRequiredService<ITenantService>();
+
+        // US-086: Dashboard with tenant-aware auth filter
         app.UseHangfireDashboard("/hangfire", new DashboardOptions
         {
-            Authorization = [new HangfireAdminAuthFilter()],
+            Authorization = [new TenantAwareHangfireDashboardFilter(tenantService)],
             AppPath = "/",
             DashboardTitle = "IMS — Background Jobs",
         });
+
+        // US-086: Register tenant job filter globally
+        var tenantFilter = app.Services.GetRequiredService<TenantJobFilter>();
+        GlobalJobFilters.Filters.Add(tenantFilter);
 
         // Registrar jobs recorrentes
         var manager = app.Services.GetRequiredService<IRecurringJobManager>();
@@ -93,19 +106,17 @@ public static class JobsModuleExtensions
             "gdpr-hard-delete",
             job => job.ExecuteAsync(),
             "0 3 * * *"); // diariamente às 03:00 UTC
-    }
-}
 
-/// <summary>
-/// Filtro de autorização para o dashboard Hangfire.
-/// Requer autenticação e role Admin.
-/// </summary>
-internal sealed class HangfireAdminAuthFilter : IDashboardAuthorizationFilter
-{
-    public bool Authorize(DashboardContext context)
-    {
-        var httpContext = context.GetHttpContext();
-        return httpContext.User.Identity?.IsAuthenticated == true
-            && httpContext.User.IsInRole("Admin");
+        // US-083: Audit log retention — daily at 04:00 UTC
+        manager.AddOrUpdate<AuditLogRetentionJob>(
+            "audit-log-retention",
+            job => job.ExecuteAsync(),
+            "0 4 * * *");
+
+        // US-088: Meilisearch drift detection — weekly on Sunday at 05:00 UTC
+        manager.AddOrUpdate<MeilisearchReindexJob>(
+            "meilisearch-reindex",
+            job => job.ExecuteAsync(false),
+            "0 5 * * 0");
     }
 }

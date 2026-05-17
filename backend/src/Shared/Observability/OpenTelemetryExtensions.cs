@@ -32,6 +32,25 @@ public static class OpenTelemetryExtensions
         AppMeter.CreateCounter<long>("ims.tenant.requests", "requests",
             "HTTP requests broken down by tenant.id");
 
+    // US-088: Meilisearch drift monitoring
+    private static readonly ObservableGauge<double> _meilisearchDriftRatio;
+    private static readonly ObservableGauge<double> _meilisearchLastReindexAt;
+    private static double _currentDriftRatio;
+    private static double _currentLastReindexAt;
+
+    static OpenTelemetryExtensions()
+    {
+        _meilisearchDriftRatio = AppMeter.CreateObservableGauge<double>(
+            "meilisearch_drift_ratio",
+            () => _currentDriftRatio,
+            description: "US-088: Ratio of documents drifted between DB and Meilisearch index");
+
+        _meilisearchLastReindexAt = AppMeter.CreateObservableGauge<double>(
+            "meilisearch_last_reindex_at",
+            () => _currentLastReindexAt,
+            description: "US-088: Unix timestamp of the last Meilisearch reindex");
+    }
+
     /// <summary>Increments the domain events published counter.</summary>
     public static void RecordDomainEventPublished(string eventType)
         => _domainEventsPublished.Add(1, new KeyValuePair<string, object?>("event.type", eventType));
@@ -46,6 +65,14 @@ public static class OpenTelemetryExtensions
             new KeyValuePair<string, object?>("tenant.id", tenantId),
             new KeyValuePair<string, object?>("http.method", method),
             new KeyValuePair<string, object?>("http.status_code", statusCode));
+
+    /// <summary>US-088: Updates the meilisearch_drift_ratio gauge.</summary>
+    public static void RecordMeilisearchDrift(double ratio)
+        => _currentDriftRatio = ratio;
+
+    /// <summary>US-088: Updates the meilisearch_last_reindex_at gauge with current Unix timestamp.</summary>
+    public static void RecordMeilisearchLastReindex(DateTime at)
+        => _currentLastReindexAt = new DateTimeOffset(at).ToUnixTimeSeconds();
 
     public static IServiceCollection AddImsOpenTelemetry(
         this IServiceCollection services,

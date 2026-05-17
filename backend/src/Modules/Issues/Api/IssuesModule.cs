@@ -49,6 +49,8 @@ public class IssuesModule : IEndpointModule
         [FromQuery] string? status = null,
         [FromQuery] string? priority = null,
         [FromQuery] string? searchTerm = null,
+        [FromQuery] string paginationType = "offset",
+        [FromQuery] string? cursor = null,
         CancellationToken ct = default)
     {
         IssueStatus? statusEnum = null;
@@ -58,6 +60,13 @@ public class IssuesModule : IEndpointModule
         IssuePriority? priorityEnum = null;
         if (!string.IsNullOrEmpty(priority) && Enum.TryParse<IssuePriority>(priority, true, out var pp))
             priorityEnum = pp;
+
+        // US-087: cursor-based pagination when requested
+        if (paginationType.Equals("cursor", StringComparison.OrdinalIgnoreCase))
+        {
+            var cursorQuery = new GetAllIssuesCursorQuery(cursor, pageSize, statusEnum, priorityEnum, searchTerm);
+            return Results.Ok(await mediator.Send(cursorQuery, ct));
+        }
 
         var query = new GetAllIssuesQuery(pageNumber, pageSize, sortBy, sortDirection, statusEnum, priorityEnum, searchTerm);
         return Results.Ok(await mediator.Send(query, ct));
