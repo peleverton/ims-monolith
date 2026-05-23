@@ -11,13 +11,13 @@ Cada agente tem uma especialidade e ownership claro sobre um conjunto de USs.
 
 | Agente | Label | Especialidade | USs Ativas |
 |---|---|---|---|
-| **Morpheus** | `agent:morpheus` | Arquiteto / Lead — decisões cross-cutting, auth, compliance, infra | ~~US-080 (#108)~~ ✅ ~~US-082 (#109)~~ ✅ ~~US-089 (#116)~~ ✅ — **sem USs pendentes** |
-| **Neo** | `agent:neo` | Backend / Full-stack — módulos de negócio, integrações, shared kernel | ~~US-083 (#110)~~ ✅ ~~US-085 (#112)~~ ✅ ~~US-086 (#113)~~ ✅ ~~US-087 (#114)~~ ✅ ~~US-088 (#115)~~ ✅ — **sem USs pendentes** |
-| **Trinity** | `agent:trinity` | UI / DX — theming, acessibilidade, user experience, frontend | US-084 (#111) 🔄 pendente |
+| **Morpheus** | `agent:morpheus` | Arquiteto / Lead — decisões cross-cutting, auth, compliance, infra | ~~US-080 (#108)~~ ✅ ~~US-082 (#109)~~ ✅ ~~US-089 (#116)~~ ✅ — US-090 (#122) 🔜 fix #126 🔜 |
+| **Neo** | `agent:neo` | Backend / Full-stack — módulos de negócio, integrações, shared kernel | ~~US-083 (#110)~~ ✅ ~~US-085 (#112)~~ ✅ ~~US-086 (#113)~~ ✅ ~~US-087 (#114)~~ ✅ ~~US-088 (#115)~~ ✅ — US-091 (#123) 🔜 US-092 (#124) 🔜 |
+| **Trinity** | `agent:trinity` | UI / DX — theming, acessibilidade, user experience, frontend | ~~US-084 (#111)~~ ✅ merged PR #121 — US-093 (#125) 🔜 |
 
 ---
 
-## 📋 Sprint 13/14/15 — Production SaaS-ready (concluído)
+## 📋 Sprint 13/14/15 — Production SaaS-ready (concluído ✅)
 
 ```
 Onda 1 (paralela — sem dependências entre si):
@@ -26,7 +26,7 @@ Onda 1 (paralela — sem dependências entre si):
 └── Neo       → feat/US-083-audit-log                 (#110) ✅ merged PR #120
 
 Onda 2:
-├── Trinity   → feat/US-084-pwa-offline               (#111) 🔄 PENDENTE
+├── Trinity   → feat/US-084-pwa-offline               (#111) ✅ merged PR #121
 ├── Neo       → feat/US-085-i18n-emails               (#112) ✅ merged PR #120
 └── Neo       → feat/US-086-hangfire-rbac-tenant      (#113) ✅ merged PR #120
 
@@ -41,6 +41,21 @@ US-080 foi mergeada antes de US-086. Ambas concluídas.
 
 ---
 
+## 📋 Sprint 16 — SaaS Identity, Billing & Documentação (atual)
+
+```
+├── Morpheus  → feat/US-090-keycloak-poc              (#122) 🔜 a iniciar
+├── Neo       → feat/US-091-billing-subscription      (#123) 🔜 a iniciar
+├── Neo       → feat/US-092-tenant-onboarding         (#124) 🔜 a iniciar
+├── Trinity   → feat/US-093-codemaps-c4               (#125) 🔜 a iniciar
+└── Morpheus  → fix/debug-tenant-endpoint             (#126) 🔜 a iniciar
+```
+
+### Dependências Sprint 16
+- US-092 (onboarding) depende de US-091 (billing) para definir o plano inicial no signup.
+
+---
+
 ## 🔀 Branches
 
 | Branch | Agente | Issue | Status |
@@ -48,12 +63,17 @@ US-080 foi mergeada antes de US-086. Ambas concluídas.
 | `feat/US-080-multitenancy-production` | Morpheus | #108 | ✅ merged PR #117 |
 | `feat/US-082-load-testing-k6` | Morpheus | #109 | ✅ merged PR #118 |
 | `feat/US-083-audit-log` | Neo | #110 | ✅ merged PR #120 |
-| `feat/US-084-pwa-offline` | Trinity | #111 | 🔄 pendente |
+| `feat/US-084-pwa-offline` | Trinity | #111 | ✅ merged PR #121 |
 | `feat/US-085-i18n-emails` | Neo | #112 | ✅ merged PR #120 |
 | `feat/US-086-hangfire-rbac-tenant` | Neo | #113 | ✅ merged PR #120 |
 | `feat/US-087-cursor-pagination` | Neo | #114 | ✅ merged PR #120 |
 | `feat/US-088-meilisearch-reindex` | Neo | #115 | ✅ merged PR #120 |
 | `feat/US-089-lgpd-gdpr` | Morpheus | #116 | ✅ merged PR #119 |
+| `feat/US-090-keycloak-poc` | Morpheus | #122 | 🔜 a iniciar |
+| `feat/US-091-billing-subscription` | Neo | #123 | 🔜 a iniciar |
+| `feat/US-092-tenant-onboarding` | Neo | #124 | 🔜 a iniciar |
+| `feat/US-093-codemaps-c4` | Trinity | #125 | 🔜 a iniciar |
+| `fix/debug-tenant-endpoint` | Morpheus | #126 | 🔜 a iniciar |
 
 ---
 
