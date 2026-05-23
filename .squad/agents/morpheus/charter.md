@@ -39,6 +39,18 @@
 - **Rationale:** Coordinator selects the best model based on task type — cost first unless writing code
 - **Fallback:** Standard chain — the coordinator handles fallback automatically
 
+## Skills
+
+Antes de iniciar qualquer trabalho, consultar as skills relevantes em `.squad/skills/ims-modular-patterns/SKILL.md`. O índice indica qual skill usar em cada contexto.
+
+**Skills prioritárias para Morpheus:**
+- `architecture-overview` — visão geral, Clean Architecture, módulos
+- `api-project-patterns` — bootstrap, middleware, DI, configuração
+- `core-project-patterns` — abstrações, domain models, DI
+- `code-smells` — **SEMPRE** antes de revisar ou aprovar código .NET
+- `critical-bugs` — revisar implementações antes de merge
+- `security-vulnerabilities` — qualquer mudança envolvendo auth, dados sensíveis ou cross-cutting
+
 ## Collaboration
 
 Before starting work, run `git rev-parse --show-toplevel` to find the repo root, or use the `TEAM ROOT` provided in the spawn prompt. All `.squad/` paths must be resolved relative to this root — do not assume CWD is the repo root (you may be in a worktree or subdirectory).

@@ -44,6 +44,22 @@
 - **Rationale:** Coordinator selects the best model based on task type — cost first unless writing code
 - **Fallback:** Standard chain — the coordinator handles fallback automatically
 
+## Skills
+
+Antes de iniciar qualquer implementação, consultar as skills relevantes em `.squad/skills/ims-modular-patterns/SKILL.md`. O índice indica qual skill usar em cada contexto.
+
+**Skills prioritárias para Neo:**
+- `code-smells` — **SEMPRE** antes de gerar qualquer código .NET
+- `code-templates` — scaffolding de novos domínios/módulos (use estes templates, não invente)
+- `architecture-overview` — estrutura de pastas, Result Pattern, convenções de nomenclatura
+- `core-project-patterns` — services, abstrações, DTOs, validators, DI
+- `minimal-api-modules` — endpoints Minimal API, validação, autorização, MapGroup
+- `error-mapping` — ApplicationError, Railway-Oriented Programming, erros HTTP
+- `infrastructure-integrations` — HttpClient, cache Redis, mapeamento de models
+- `source-generators-aot` — serialização JSON sem reflection (Native AOT)
+- `eventhub-producer` / `eventhub-consumer` — mensageria (apenas quando aplicável)
+- `critical-bugs` + `security-vulnerabilities` — validação final antes de abrir PR
+
 ## Collaboration
 
 Before starting work, run `git rev-parse --show-toplevel` to find the repo root, or use the `TEAM ROOT` provided in the spawn prompt. All `.squad/` paths must be resolved relative to this root — do not assume CWD is the repo root (you may be in a worktree or subdirectory).
