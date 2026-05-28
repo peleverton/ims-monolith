@@ -73,6 +73,7 @@ Modules/
  Analytics/AnalyticsHandlerTests.cs
  Auth/AuthServiceTests.cs
  Features/FeatureFlagsTests.cs
+ Gdpr/GdprHandlerTests.cs
  Inventory/
   InventoryCommandHandlerTests.cs
   ProductEntityTests.cs

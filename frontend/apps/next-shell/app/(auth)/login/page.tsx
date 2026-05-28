@@ -7,13 +7,16 @@ import { z } from "zod";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
-import { Eye, EyeOff, LogIn } from "lucide-react";
+import { Eye, EyeOff, LogIn, KeyRound } from "lucide-react";
 
 const schema = z.object({
   username: z.string().min(3, "Mínimo 3 caracteres"),
   password: z.string().min(6, "Mínimo 6 caracteres"),
 });
 type FormData = z.infer<typeof schema>;
+
+/** US-090: Feature flag exposed via env var set at build/runtime */
+const USE_KEYCLOAK = process.env.NEXT_PUBLIC_USE_KEYCLOAK === "true";
 
 function LoginForm() {
   const router = useRouter();
@@ -115,6 +118,23 @@ function LoginForm() {
           {isSubmitting ? "Entrando..." : "Entrar"}
         </button>
       </form>
+
+      {USE_KEYCLOAK && (
+        <>
+          <div className="mt-4 flex items-center gap-3">
+            <hr className="flex-1 border-white/20" />
+            <span className="text-white/50 text-xs">ou</span>
+            <hr className="flex-1 border-white/20" />
+          </div>
+          <a
+            href={`/api/auth/keycloak-login?callbackUrl=${encodeURIComponent(callbackUrl)}`}
+            className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-medium rounded-lg transition-colors"
+          >
+            <KeyRound size={16} />
+            Entrar com Keycloak (SSO)
+          </a>
+        </>
+      )}
 
       <p className="mt-6 text-center text-sm text-blue-300">
         Não tem conta?{" "}

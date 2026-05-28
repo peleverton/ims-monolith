@@ -1,5 +1,6 @@
 # docker-compose.dev.yml
 # US-023: Infraestrutura local de desenvolvimento — RabbitMQ + Redis
+# US-090: Keycloak identity provider (opcional — ativo quando UseKeycloak=true)
 #
 # Uso:
 #   docker compose -f docker-compose.dev.yml up -d
@@ -7,6 +8,8 @@
 #
 # RabbitMQ Management UI: http://localhost:15672  (ims / ims_pass)
 # Redis:                  localhost:6379
+# Keycloak Admin UI:      http://localhost:8180   (admin / admin)
+#   Realm "ims" é importado automaticamente na primeira inicialização.
 
 version: "3.9"
 
@@ -52,8 +55,40 @@ services:
       timeout: 5s
       retries: 5
 
+  # ─────────────────────────────────────────────
+  # Keycloak 24 — Identity Provider (US-090)
+  # ─────────────────────────────────────────────
+  # Porta 8180 para não colidir com a app (8080).
+  # O realm "ims" é importado na primeira inicialização via volume mount.
+  # Admin: http://localhost:8180  (admin / admin)
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    container_name: ims-keycloak
+    restart: unless-stopped
+    command: start-dev --import-realm
+    ports:
+      - "8180:8080"
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HTTP_PORT: 8080
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_STRICT_HTTPS: "false"
+      KC_HTTP_ENABLED: "true"
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+      - ./infra/keycloak:/opt/keycloak/data/import
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\n\r\n' >&3 && cat <&3 | grep -q '200 OK'"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
 volumes:
   rabbitmq_data:
     driver: local
   redis_data:
+    driver: local
+  keycloak_data:
     driver: local
