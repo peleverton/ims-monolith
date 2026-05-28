@@ -26,6 +26,9 @@ public static class RateLimitingExtensions
 
         /// <summary>Global fallback limiter applied to all endpoints.</summary>
         public const string Global = "GlobalPolicy";
+
+        /// <summary>US-092: Per-IP limiter for self-service tenant signup (5/hour).</summary>
+        public const string Signup = "SignupPolicy";
     }
 
     // ── Default values (used when appsettings.json section is missing) ──────
@@ -40,6 +43,11 @@ public static class RateLimitingExtensions
         public const int GlobalPermitLimit = 100;
         public const int GlobalWindowSeconds = 60;
         public const int GlobalQueueLimit = 10;
+
+        // Signup policy defaults (US-092): 5 requests per hour per IP
+        public const int SignupPermitLimit = 5;
+        public const int SignupWindowSeconds = 3600;
+        public const int SignupQueueLimit = 0;
     }
 
     /// <summary>
@@ -96,6 +104,27 @@ public static class RateLimitingExtensions
                         Window = TimeSpan.FromSeconds(authWindowSeconds),
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                         QueueLimit = authQueueLimit,
+                        AutoReplenishment = true
+                    });
+            });
+
+            // ── Signup Policy (per-IP, fixed window — 5/hour) ─────────────
+            var signupPermitLimit = section.GetValue("Signup:PermitLimit", Defaults.SignupPermitLimit);
+            var signupWindowSeconds = section.GetValue("Signup:WindowSeconds", Defaults.SignupWindowSeconds);
+            var signupQueueLimit = section.GetValue("Signup:QueueLimit", Defaults.SignupQueueLimit);
+
+            options.AddPolicy(Policies.Signup, httpContext =>
+            {
+                var clientIp = GetClientIpAddress(httpContext);
+
+                return RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: clientIp,
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = signupPermitLimit,
+                        Window = TimeSpan.FromSeconds(signupWindowSeconds),
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = signupQueueLimit,
                         AutoReplenishment = true
                     });
             });

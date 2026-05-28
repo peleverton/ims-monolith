@@ -1,3 +1,4 @@
+using IMS.Modular.Modules.Billing.Application.Interfaces;
 using IMS.Modular.Modules.Issues.Application.DTOs;
 using IMS.Modular.Modules.Issues.Domain.Enums;
 using IMS.Modular.Shared.Domain;
@@ -7,7 +8,7 @@ namespace IMS.Modular.Modules.Issues.Application.Commands;
 
 public record CreateIssueCommand(
     string Title, string Description, IssuePriority Priority,
-    Guid ReporterId, DateTime? DueDate) : IRequest<Result<IssueDto>>;
+    Guid ReporterId, DateTime? DueDate) : IRequest<Result<IssueDto>>, IRequiresQuota;
 
 public record UpdateIssueCommand(
     Guid Id, string? Title, string? Description,

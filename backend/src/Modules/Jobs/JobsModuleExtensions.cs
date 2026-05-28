@@ -4,6 +4,7 @@ using Hangfire.InMemory;
 using Hangfire.PostgreSql;
 using IMS.Modular.Shared.Abstractions;
 using IMS.Modular.Shared.MultiTenancy;
+using IMS.Modular.Shared.MultiTenancy.TenantManagement;
 
 namespace IMS.Modular.Modules.Jobs;
 
@@ -29,6 +30,8 @@ public static class JobsModuleExtensions
         services.AddScoped<AuditLogRetentionJob>();
         // US-088: Meilisearch reindex job
         services.AddScoped<MeilisearchReindexJob>();
+        // US-092: Tenant provisioning job (fire-and-forget, queued during self-service signup)
+        services.AddScoped<TenantProvisioningJob>();
 
         // Configurar Hangfire storage
         services.AddHangfire(config =>

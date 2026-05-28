@@ -8,6 +8,9 @@ using IMS.Modular.Modules.Analytics.Api;
 using IMS.Modular.Modules.Audit;
 using IMS.Modular.Modules.Auth;
 using IMS.Modular.Modules.Auth.Api;
+using IMS.Modular.Modules.Billing;
+using IMS.Modular.Modules.Billing.Api;
+using IMS.Modular.Modules.Billing.Application.Behaviors;
 using IMS.Modular.Modules.Features.Api;
 using IMS.Modular.Modules.Search;
 using IMS.Modular.Modules.Search.Api;
@@ -102,8 +105,9 @@ builder.Services.AddMediatR(cfg =>
 {
     cfg.RegisterServicesFromAssembly(typeof(Program).Assembly);
 
-    // Pipeline Behaviors (order matters: Validation → Logging → Caching → Handler)
+    // Pipeline Behaviors (order matters: Validation → Quota → Logging → Caching → Handler)
     cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+    cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(QuotaBehavior<,>));
     cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
     cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(CachingBehavior<,>));
 });
@@ -171,6 +175,9 @@ builder.Services.AddAuditModule(builder.Configuration, builder.Environment);
 
 // US-071: Full-text Search (Meilisearch)
 builder.Services.AddSearchModule(builder.Configuration);
+
+// US-091: Billing & Subscription
+builder.Services.AddBillingModule(builder.Configuration, builder.Environment);
 
 // US-079: YARP proxy for Issues microservice (only active when UseIssuesMicroservice flag is on)
 builder.Services.AddIssuesProxy(builder.Configuration);
@@ -302,6 +309,8 @@ NotificationsModule.Map(app);
 app.MapWebhooksModule();
 SearchModule.Map(app);
 FeaturesModule.Map(app);
+// US-091: Billing & Subscription
+BillingModule.Map(app);
 // US-080: Tenant management API
 TenantEndpoints.Map(app);
 
@@ -334,6 +343,7 @@ try
     await app.Services.InitializeNotificationsModuleAsync();
     await app.Services.InitializeWebhooksModuleAsync();
     await app.Services.InitializeSearchModuleAsync();
+    await app.Services.InitializeBillingModuleAsync();   // US-091
 }
 catch (Exception ex)
 {

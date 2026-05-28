@@ -27,4 +27,8 @@ public static class Policies
     // ── Analytics ────────────────────────────────────────────────────────
     /// <summary>Admin and Manager can view analytics dashboards and export data.</summary>
     public const string CanViewAnalytics = "CanViewAnalytics";
+
+    // ── Admin ─────────────────────────────────────────────────────────────────
+    /// <summary>Only Admin role can perform this action.</summary>
+    public const string AdminOnly = "AdminOnly";
 }
