@@ -61,6 +61,18 @@ Modules/Analytics/
   Handlers/AnalyticsHandlers.cs
   Queries/AnalyticsQueries.cs
  Infrastructure/AnalyticsReadRepository.cs
+Modules/Audit/
+ Api/AuditModule.cs
+ Application/
+  AuditActions.cs
+  AuditService.cs
+  DTOs/AuditLogEntryDto.cs
+  Handlers/AuditQueryHandlers.cs
+  IAuditService.cs
+  Queries/AuditQueries.cs
+ AuditModuleExtensions.cs
+ Domain/AuditLogEntry.cs
+ Infrastructure/AuditDbContext.cs
 Modules/Auth/Api/
  AuthModule.cs
  UserAdminModule.cs
@@ -75,6 +87,7 @@ Modules/Auth/
  AuthModuleExtensions.cs
  Domain/Entities/
   AuthEntities.cs
+  DeleteRequest.cs
   RefreshToken.cs
  Infrastructure/
   AuthDbContext.cs
@@ -83,6 +96,7 @@ Modules/Auth/
    20260424212120_InitialSchema.Designer.cs
    20260430234843_AddTenantIdToAuth.cs
    20260430234843_AddTenantIdToAuth.Designer.cs
+   20260515192921_AddDeleteRequests.cs
    AuthDbContextModelSnapshot.cs
 Modules/
  Features/Api/FeaturesModule.cs
@@ -175,9 +189,14 @@ Modules/
   IssuesModuleExtensions.cs
  Jobs/
   AnalyticsSnapshotJob.cs
+  AuditLogRetentionJob.cs
   ExpiryCheckJob.cs
+  GdprHardDeleteJob.cs
   JobsModuleExtensions.cs
+  MeilisearchReindexJob.cs
   OverdueIssuesJob.cs
+  TenantAwareHangfireDashboardFilter.cs
+  TenantJobFilter.cs
   TokenCleanupJob.cs
  Notifications/
   Api/NotificationsModule.cs
@@ -201,16 +220,26 @@ Modules/
   Domain/SearchModels.cs
   Infrastructure/MeilisearchService.cs
   SearchModuleExtensions.cs
+ UserManagement/Api/
+  GdprModule.cs
+  UserManagementModule.cs
+ UserManagement/Application/Commands/
+  GdprCommands.cs
+  UserCommands.cs
+ UserManagement/Application/DTOs/
+  GdprDtos.cs
+  UserManagementDtos.cs
+ UserManagement/Application/Handlers/
+  GdprHandlers.cs
+  UserHandlers.cs
+ UserManagement/Application/
+  Queries/UserQueries.cs
+  Validators/UserValidators.cs
  UserManagement/
-  Api/UserManagementModule.cs
-  Application/
-   Commands/UserCommands.cs
-   DTOs/UserManagementDtos.cs
-   Handlers/UserHandlers.cs
-   Queries/UserQueries.cs
-   Validators/UserValidators.cs
   Domain/Events/UserEvents.cs
   Infrastructure/
+   GdprRepository.cs
+   IGdprRepository.cs
    IUserManagementRepository.cs
    UserManagementRepository.cs
   UserManagementModuleExtensions.cs
@@ -241,6 +270,7 @@ Shared/Abstractions/
  ICacheable.cs
  ICacheService.cs
  ICorrelationIdAccessor.cs
+ IEmailService.cs
  IEndpointModule.cs
  IMessageBus.cs
  IUserContext.cs
@@ -253,13 +283,22 @@ Shared/Behaviors/
  ValidationBehavior.cs
 Shared/
  Caching/CacheExtensions.cs
- Common/Pagination.cs
+ Common/
+  CursorPagination.cs
+  Pagination.cs
  Database/DatabaseExtensions.cs
  Domain/
   BaseDbContext.cs
   BaseEntity.cs
   PagedResult.cs
   Result.cs
+ Email/
+  IEmailTemplateService.cs
+  LocalizedEmailTemplateService.cs
+  LogEmailService.cs
+  Templates/
+   EnUsTemplates.cs
+   PtBrTemplates.cs
  Errors/
   ErrorCodes.cs
   ExceptionHandlingMiddleware.cs
@@ -291,6 +330,10 @@ Shared/
   MultiTenancyExtensions.cs
   TenantAwareDbContext.cs
   TenantContext.cs
+  TenantManagement/Migrations/
+   20260508005436_InitialTenants.cs
+   20260508005436_InitialTenants.Designer.cs
+   TenantDbContextModelSnapshot.cs
   TenantManagement/
    TenantDbContext.cs
    TenantEndpoints.cs

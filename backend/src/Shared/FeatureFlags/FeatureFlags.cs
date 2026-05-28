@@ -11,4 +11,6 @@ public static class FeatureFlags
     public const string EnableFullTextSearch  = nameof(EnableFullTextSearch);
     /// <summary>US-081: Enables row-level multi-tenancy enforcement via TenantId query filters.</summary>
     public const string EnableMultiTenancy    = nameof(EnableMultiTenancy);
+    /// <summary>US-090: Delegates authentication to Keycloak via OIDC. When false, falls back to custom JWT auth.</summary>
+    public const string UseKeycloak           = nameof(UseKeycloak);
 }

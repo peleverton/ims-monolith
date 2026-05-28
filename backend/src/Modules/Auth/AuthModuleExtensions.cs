@@ -2,10 +2,14 @@ using IMS.Modular.Modules.Auth.Application.Services;
 using IMS.Modular.Modules.Auth.Infrastructure;
 using IMS.Modular.Shared.Abstractions;
 using IMS.Modular.Shared.Database;
+using IMS.Modular.Shared.FeatureFlags;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using ImsAuthService = IMS.Modular.Modules.Auth.Application.Services.IAuthenticationService;
+using ImsAuthServiceImpl = IMS.Modular.Modules.Auth.Application.Services.AuthenticationService;
 
 namespace IMS.Modular.Modules.Auth;
 
@@ -23,29 +27,59 @@ public static class AuthModuleExtensions
 
         // Services
         services.AddSingleton<JwtTokenService>();
-        services.AddScoped<IAuthenticationService, AuthenticationService>();
+        services.AddScoped<ImsAuthService, ImsAuthServiceImpl>();
         services.AddScoped<IUserAdminService, UserAdminService>();
 
-        // JWT Authentication
+        // US-090: Feature flag read at startup — determines which auth provider is active.
+        // IFeatureManager is async/scoped and cannot be used here at registration time,
+        // so we read from IConfiguration directly (same source of truth).
+        var useKeycloak = configuration.GetValue<bool>($"FeatureManagement:{FeatureFlags.UseKeycloak}");
+
+        if (useKeycloak)
+            ConfigureKeycloakAuth(services, configuration);
+        else
+            ConfigureCustomJwtAuth(services, configuration);
+
+        ConfigureAuthorizationPolicies(services);
+
+        return services;
+    }
+
+    /// <summary>
+    /// US-090: Keycloak OIDC — JWT Bearer validation against Keycloak's JWKS endpoint.
+    /// Tokens are issued by Keycloak (RSA-signed); the backend only validates them.
+    /// Claims transformation maps realm_access.roles → ClaimTypes.Role.
+    /// </summary>
+    private static void ConfigureKeycloakAuth(IServiceCollection services, IConfiguration configuration)
+    {
+        var authority = configuration["Keycloak:Authority"]
+            ?? throw new InvalidOperationException("Keycloak:Authority is not configured");
+        var audience = configuration["Keycloak:Audience"] ?? "ims-backend";
+        var requireHttps = configuration.GetValue<bool>("Keycloak:RequireHttpsMetadata", true);
+
         services.AddAuthentication(options =>
         {
             options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme    = JwtBearerDefaults.AuthenticationScheme;
         })
         .AddJwtBearer(options =>
         {
+            options.Authority             = authority;
+            options.Audience              = audience;
+            options.RequireHttpsMetadata  = requireHttps;
+            options.MapInboundClaims      = false; // keep raw claim names from Keycloak
+
             options.TokenValidationParameters = new TokenValidationParameters
             {
-                ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(
-                    Encoding.UTF8.GetBytes(configuration["Jwt:SecretKey"]
-                        ?? throw new InvalidOperationException("JWT SecretKey is not configured"))),
-                ValidateIssuer = true,
-                ValidIssuer = configuration["Jwt:Issuer"],
+                ValidateIssuer   = true,
                 ValidateAudience = true,
-                ValidAudience = configuration["Jwt:Audience"],
+                ValidAudience    = audience,
                 ValidateLifetime = true,
-                ClockSkew = TimeSpan.Zero
+                ClockSkew        = TimeSpan.Zero,
+                // Keycloak uses preferred_username for the Name claim
+                NameClaimType    = "preferred_username",
+                // Roles come from KeycloakClaimsTransformation (realm_access.roles)
+                RoleClaimType    = System.Security.Claims.ClaimTypes.Role
             };
 
             options.Events = new JwtBearerEvents
@@ -59,6 +93,51 @@ public static class AuthModuleExtensions
             };
         });
 
+        // Register claims transformation — maps Keycloak realm_access.roles → ClaimTypes.Role
+        services.AddScoped<IClaimsTransformation, KeycloakClaimsTransformation>();
+    }
+
+    /// <summary>
+    /// Original custom JWT auth (HMAC-SHA256, symmetric key).
+    /// Preserved as fallback when UseKeycloak=false — zero regression.
+    /// </summary>
+    private static void ConfigureCustomJwtAuth(IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddAuthentication(options =>
+        {
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme    = JwtBearerDefaults.AuthenticationScheme;
+        })
+        .AddJwtBearer(options =>
+        {
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(
+                    Encoding.UTF8.GetBytes(configuration["Jwt:SecretKey"]
+                        ?? throw new InvalidOperationException("JWT SecretKey is not configured"))),
+                ValidateIssuer   = true,
+                ValidIssuer      = configuration["Jwt:Issuer"],
+                ValidateAudience = true,
+                ValidAudience    = configuration["Jwt:Audience"],
+                ValidateLifetime = true,
+                ClockSkew        = TimeSpan.Zero
+            };
+
+            options.Events = new JwtBearerEvents
+            {
+                OnAuthenticationFailed = context =>
+                {
+                    if (context.Exception is SecurityTokenExpiredException)
+                        context.Response.Headers.Append("Token-Expired", "true");
+                    return Task.CompletedTask;
+                }
+            };
+        });
+    }
+
+    private static void ConfigureAuthorizationPolicies(IServiceCollection services)
+    {
         services.AddAuthorization(options =>
         {
             // Legacy policy — kept for backward compatibility
@@ -67,32 +146,24 @@ public static class AuthModuleExtensions
 
             // ── US-057: Granular RBAC policies ────────────────────────────────
 
-            // User management: Admin only
             options.AddPolicy(Policies.CanManageUsers, policy =>
                 policy.RequireRole("Admin"));
 
-            // Issues: any authenticated user can create/view
             options.AddPolicy(Policies.CanCreateIssue, policy =>
                 policy.RequireAuthenticatedUser());
 
-            // Issues management (delete, bulk): Admin or Manager
             options.AddPolicy(Policies.CanManageIssues, policy =>
                 policy.RequireRole("Admin", "Manager"));
 
-            // Inventory read: any authenticated user
             options.AddPolicy(Policies.CanViewInventory, policy =>
                 policy.RequireAuthenticatedUser());
 
-            // Inventory write: Admin or Manager
             options.AddPolicy(Policies.CanManageInventory, policy =>
                 policy.RequireRole("Admin", "Manager"));
 
-            // Analytics: Admin or Manager
             options.AddPolicy(Policies.CanViewAnalytics, policy =>
                 policy.RequireRole("Admin", "Manager"));
         });
-
-        return services;
     }
 
     /// <summary>

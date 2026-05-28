@@ -12,6 +12,7 @@ public class FeatureFlagsTests
         Assert.Equal("EnableKanbanView", FeatureFlags.EnableKanbanView);
         Assert.Equal("EnableWebhooks", FeatureFlags.EnableWebhooks);
         Assert.Equal("EnableFullTextSearch", FeatureFlags.EnableFullTextSearch);
+        Assert.Equal("UseKeycloak", FeatureFlags.UseKeycloak);
     }
 
     [Fact]
@@ -36,5 +37,27 @@ public class FeatureFlagsTests
         Assert.False(flags[FeatureFlags.EnableKanbanView]);
         Assert.True(flags[FeatureFlags.EnableWebhooks]);
         Assert.False(flags[FeatureFlags.EnableFullTextSearch]);
+    }
+
+    [Fact]
+    public async Task UseKeycloak_DefaultsToFalse()
+    {
+        var featureManager = Substitute.For<IFeatureManager>();
+        featureManager.IsEnabledAsync(FeatureFlags.UseKeycloak).Returns(false);
+
+        var result = await featureManager.IsEnabledAsync(FeatureFlags.UseKeycloak);
+
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task UseKeycloak_CanBeEnabled()
+    {
+        var featureManager = Substitute.For<IFeatureManager>();
+        featureManager.IsEnabledAsync(FeatureFlags.UseKeycloak).Returns(true);
+
+        var result = await featureManager.IsEnabledAsync(FeatureFlags.UseKeycloak);
+
+        Assert.True(result);
     }
 }
