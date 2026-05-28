@@ -1,8 +1,15 @@
-using IMS.Modular.Shared.MultiTenancy.TenantManagement;
+using IMS.Modular.Modules.Auth.Domain.Entities;
+using IMS.Modular.Modules.Auth.Infrastructure;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.RegularExpressions;
+using FluentValidation;
+using Hangfire;
+using IMS.Modular.Shared.RateLimiting;
 
 namespace IMS.Modular.Shared.MultiTenancy.TenantManagement;
 
@@ -105,6 +112,121 @@ public static class TenantEndpoints
             return Results.NoContent();
         })
         .WithName("DeactivateTenant");
+
+        // ── US-092: Self-service tenant signup (public, rate-limited) ────────
+
+        app.MapPost("/api/tenants/signup", async (
+            SignupRequest req,
+            TenantDbContext tenantDb,
+            AuthDbContext authDb,
+            IValidator<SignupRequest> validator,
+            IBackgroundJobClient jobClient) =>
+        {
+            // Validate request body
+            var validation = await validator.ValidateAsync(req);
+            if (!validation.IsValid)
+                return Results.ValidationProblem(validation.ToDictionary());
+
+            // Generate tenant slug from org name
+            var slug = GenerateTenantSlug(req.OrgName);
+            if (string.IsNullOrEmpty(slug))
+                return Results.BadRequest(new { message = "Org name could not be converted to a valid tenant ID." });
+
+            // Conflict check
+            if (await tenantDb.Tenants.AnyAsync(t => t.Id == slug))
+                return Results.Conflict(new { message = $"Tenant '{slug}' already exists." });
+
+            // Create tenant (inactive until provisioning completes)
+            var tenant = new TenantEntity
+            {
+                Id = slug,
+                Name = req.OrgName.Trim(),
+                Plan = req.Plan.ToLowerInvariant(),
+                ContactEmail = req.Email.Trim(),
+                IsActive = false,
+                CreatedAt = DateTime.UtcNow,
+                Notes = "Provisioning"
+            };
+            tenantDb.Tenants.Add(tenant);
+
+            // Create admin user in AuthDbContext
+            var username = BuildUsername(slug);
+            if (!await authDb.Users.AnyAsync(u => u.Username == username || u.Email == req.Email))
+            {
+                var adminRole = await authDb.Roles.FirstOrDefaultAsync(r => r.Name == "Admin");
+                var newUser = new User
+                {
+                    Username = username,
+                    Email = req.Email.Trim(),
+                    PasswordHash = HashPassword(req.Password),
+                    FullName = req.OrgName.Trim(),
+                    IsActive = true,
+                    TenantId = slug
+                };
+                authDb.Users.Add(newUser);
+                if (adminRole is not null)
+                    authDb.UserRoles.Add(new UserRole
+                    {
+                        UserId = newUser.Id,
+                        RoleId = adminRole.Id
+                    });
+            }
+
+            await tenantDb.SaveChangesAsync();
+            await authDb.SaveChangesAsync();
+
+            // Queue the background provisioning job
+            jobClient.Enqueue<TenantProvisioningJob>(job =>
+                job.ExecuteAsync(slug, req.Plan.ToLowerInvariant(), req.Email.Trim()));
+
+            return Results.Accepted(null, new
+            {
+                tenantId = slug,
+                message = "Provisioning started. Check your email."
+            });
+        })
+        .WithTags("Tenants")
+        .WithName("SignupTenant")
+        .WithSummary("US-092: Self-service tenant signup (public)")
+        .RequireRateLimiting(RateLimitingExtensions.Policies.Signup)
+        .AllowAnonymous();
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Converts an org name to a URL-safe tenant slug:
+    /// lowercase, alphanumeric + dashes only, max 50 chars.
+    /// </summary>
+    private static string GenerateTenantSlug(string orgName)
+    {
+        var slug = orgName.ToLowerInvariant().Trim();
+        // Replace spaces (and sequences of spaces) with a single dash
+        slug = Regex.Replace(slug, @"\s+", "-");
+        // Remove any character that is not alphanumeric or a dash
+        slug = Regex.Replace(slug, @"[^a-z0-9\-]", "");
+        // Collapse multiple consecutive dashes
+        slug = Regex.Replace(slug, @"-{2,}", "-");
+        // Trim leading/trailing dashes
+        slug = slug.Trim('-');
+        return slug.Length > 50 ? slug[..50] : slug;
+    }
+
+    /// <summary>
+    /// Derives a unique username from the tenant slug (matches ^[a-zA-Z0-9_]+$).
+    /// </summary>
+    private static string BuildUsername(string slug)
+    {
+        var sanitised = slug.Replace("-", "_");
+        var candidate = $"admin_{sanitised}";
+        return candidate.Length > 50 ? candidate[..50] : candidate;
+    }
+
+    /// <summary>SHA-256 password hash (same algorithm as AuthenticationService).</summary>
+    private static string HashPassword(string password)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(password));
+        return Convert.ToBase64String(bytes);
     }
 }
 
