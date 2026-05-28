@@ -140,8 +140,7 @@ public static class AuthModuleExtensions
     {
         services.AddAuthorization(options =>
         {
-            // Legacy policy — kept for backward compatibility
-            options.AddPolicy("AdminOnly", policy =>
+            options.AddPolicy(Policies.AdminOnly, policy =>
                 policy.RequireRole("Admin"));
 
             // ── US-057: Granular RBAC policies ────────────────────────────────

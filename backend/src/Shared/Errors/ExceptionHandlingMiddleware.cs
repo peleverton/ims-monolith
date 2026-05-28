@@ -152,6 +152,13 @@ public sealed class ExceptionHandlingMiddleware
                 "Client Closed Request",
                 "The request was cancelled by the client."),
 
+            // Quota exceeded → 402
+            QuotaExceededException ex => (
+                StatusCodes.Status402PaymentRequired,
+                "QUOTA_EXCEEDED",
+                "Payment Required",
+                ex.Message),
+
             // Everything else → 500
             _ => (
                 StatusCodes.Status500InternalServerError,
