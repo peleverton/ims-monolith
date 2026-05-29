@@ -1,0 +1,48 @@
+name: Generate Architecture Diagrams
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/architecture/src/**'
+      - '.github/workflows/generate-diagrams.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate-diagrams:
+    name: Generate SVG diagrams from Mermaid sources
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install mermaid-cli
+        run: npm install -g @mermaid-js/mermaid-cli
+
+      - name: Generate SVGs
+        run: |
+          cd docs/architecture
+          for f in src/*.mmd; do
+            name=$(basename "$f" .mmd)
+            echo "→ Generating $name.svg"
+            mmdc -i "$f" -o "${name}.svg" -t neutral -q
+          done
+
+      - name: Commit regenerated diagrams
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "docs(architecture): regenerate diagrams from Mermaid sources [skip ci]"
+          file_pattern: "docs/architecture/*.svg"
+          commit_user_name: "github-actions[bot]"
+          commit_user_email: "github-actions[bot]@users.noreply.github.com"

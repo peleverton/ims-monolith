@@ -1,0 +1,45 @@
+C4Component
+  title C4 Level 3 — Components: Backend API
+
+  Person(user, "User / Admin", "Via Next.js Frontend")
+
+  System_Boundary(backend, "Backend API — .NET 9") {
+    Component(auth,      "Auth Module",            "C#, BCrypt, JWT",       "Login, registration, token issuance and refresh")
+    Component(userMgmt,  "UserManagement Module",  "C#, EF Core",           "Users, roles, tenant-scoped permissions")
+    Component(issues,    "Issues Module",          "C#, EF Core, MediatR",  "Issue lifecycle, comments, assignment (aggregate root)")
+    Component(inventory, "Inventory Module",       "C#, EF Core, MediatR",  "Products, suppliers, locations, stock movements")
+    Component(invIssues, "InventoryIssues Module", "C#, EF Core",           "Bridge: stock alerts → auto issue creation")
+    Component(analytics, "Analytics Module",       "C#, Dapper",            "Read-side dashboards (no writes)")
+    Component(notif,     "Notifications Module",   "C#, SignalR",           "Real-time push notifications to connected clients")
+    Component(webhooks,  "Webhooks Module",        "C#, RabbitMQ",          "Outbound HTTP webhooks on domain events")
+    Component(search,    "Search Module",          "C#, Meilisearch",       "Full-text search index and query")
+    Component(jobs,      "Jobs Module",            "C#, Hangfire",          "Background jobs and scheduled tasks")
+    Component(billing,   "Billing Module",         "C#, EF Core",           "Tenant subscription plans and billing state")
+    Component(audit,     "Audit Module",           "C#, EF Core",           "Immutable write audit log via pipeline behavior")
+    Component(features,  "Features Module",        "C#",                    "Per-tenant feature flag evaluation")
+    Component(kernel,    "Shared Kernel",          "C#",                    "Multi-tenancy, CQRS pipeline, caching, outbox, messaging, observability")
+  }
+
+  ContainerDb(postgres,    "PostgreSQL",  "PostgreSQL 16", "")
+  ContainerDb(redis,       "Redis",       "Redis 7",       "")
+  Container(meilisearch,   "Meilisearch", "Meilisearch",   "")
+  ContainerQueue(rabbitmq, "RabbitMQ",    "RabbitMQ 3",    "")
+
+  Rel(user, auth,      "POST /api/auth/login|register|refresh")
+  Rel(user, issues,    "CRUD /api/issues")
+  Rel(user, inventory, "CRUD /api/inventory")
+  Rel(user, analytics, "GET  /api/analytics")
+  Rel(user, search,    "GET  /api/search")
+
+  Rel(issues,    kernel,    "Uses pipeline behaviors")
+  Rel(inventory, kernel,    "Uses pipeline behaviors")
+  Rel(invIssues, issues,    "Creates issues on low-stock events")
+  Rel(invIssues, inventory, "Handles stock domain events")
+  Rel(search,    meilisearch, "Index / Query")
+  Rel(analytics, postgres,    "Dapper read queries")
+  Rel(audit,     postgres,    "Writes audit records")
+  Rel(webhooks,  rabbitmq,    "Publishes webhook jobs")
+  Rel(notif,     user,        "SignalR push", "WSS")
+  Rel(kernel,    redis,       "Cache operations")
+
+  UpdateLayoutConfig($c4ShapeInRow="4", $c4BoundaryInRow="1")

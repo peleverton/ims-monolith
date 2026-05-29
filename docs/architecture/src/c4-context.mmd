@@ -1,0 +1,19 @@
+C4Context
+  title C4 Level 1 — System Context: IMS Monolith
+
+  Person(user, "User", "Internal staff member<br/>managing issues and inventory")
+  Person(admin, "Admin", "System administrator<br/>managing tenants and config")
+
+  System(ims, "IMS Monolith", "Issue and Inventory Management System<br/>.NET 9 · Next.js 15 · Modular Monolith")
+
+  System_Ext(email, "Email Provider", "Transactional email delivery<br/>SMTP / SendGrid")
+  System_Ext(keycloak, "Keycloak", "External Identity Provider<br/>(PoC — US-090)")
+  System_Ext(webhookTargets, "Webhook Consumers", "External systems receiving<br/>IMS domain event webhooks")
+
+  Rel(user,  ims, "Manages issues and inventory", "HTTPS")
+  Rel(admin, ims, "Configures system, manages tenants", "HTTPS")
+  Rel(ims, email, "Sends transactional emails", "SMTP")
+  Rel(ims, keycloak, "Delegates auth (PoC)", "OIDC")
+  Rel(ims, webhookTargets, "Delivers domain event webhooks", "HTTPS")
+
+  UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")
