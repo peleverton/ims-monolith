@@ -1,0 +1,33 @@
+C4Container
+  title C4 Level 2 — Containers: IMS Monolith
+
+  Person(user,  "User",  "Internal staff")
+  Person(admin, "Admin", "System admin")
+
+  System_Boundary(ims, "IMS Monolith") {
+    Container(nextjs,   "Next.js Frontend",  "Next.js 15, TypeScript, Tailwind CSS", "Primary web UI — SSR + PWA")
+    Container(backend,  "Backend API",        ".NET 9, ASP.NET Core Minimal API",    "Composition root for all business modules")
+    ContainerDb(postgres,    "PostgreSQL",    "PostgreSQL 16",    "Primary relational store — one schema per module")
+    ContainerDb(redis,       "Redis",         "Redis 7",          "Distributed cache and output cache")
+    Container(meilisearch,   "Meilisearch",   "Meilisearch",      "Full-text search for issues and products")
+    ContainerQueue(rabbitmq, "RabbitMQ",      "RabbitMQ 3",       "Async integration events and webhook delivery")
+    Container(hangfire,      "Hangfire",      "Hangfire",         "Background job scheduler (uses PostgreSQL)")
+  }
+
+  System_Ext(email,   "Email Provider",    "SMTP / SendGrid")
+  System_Ext(keycloak,"Keycloak",          "OIDC Identity Provider")
+  System_Ext(webhooks,"Webhook Consumers", "External HTTP endpoints")
+
+  Rel(user,  nextjs,  "Uses via browser",       "HTTPS")
+  Rel(admin, nextjs,  "Uses via browser",        "HTTPS")
+  Rel(nextjs, backend,"REST + SignalR",           "HTTPS / WSS")
+  Rel(backend, postgres,    "Read / Write",       "EF Core / Dapper")
+  Rel(backend, redis,       "Cache get / set",    "StackExchange.Redis")
+  Rel(backend, meilisearch, "Index + Query",      "HTTP")
+  Rel(backend, rabbitmq,    "Publish events",     "AMQP")
+  Rel(backend, hangfire,    "Enqueue / Execute",  "Hangfire client")
+  Rel(backend, email,       "Send emails",        "SMTP")
+  Rel(backend, keycloak,    "Token validation",   "OIDC")
+  Rel(backend, webhooks,    "HTTP POST webhooks", "HTTPS")
+
+  UpdateLayoutConfig($c4ShapeInRow="4", $c4BoundaryInRow="1")

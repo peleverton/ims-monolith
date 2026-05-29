@@ -107,6 +107,14 @@ fix(US-0XX): descrição
 Novos componentes em `components/ui/` devem ser genéricos e documentados com JSDoc.
 Trinity é responsável pela aprovação de novos componentes de UI base.
 
+### 6. Documentação deve acompanhar o código
+Toda alteração de comportamento, arquitetura ou contrato de API **deve atualizar a documentação correspondente** na mesma PR:
+- Novos módulos → atualizar `docs/architecture/` (workspace.dsl + regenerar SVGs)
+- Novos endpoints ou mudança de contrato → atualizar `README.md` (seção API Reference) e `docs/TECHNICAL_GUIDE.md`
+- Mudança de evento de domínio (novo, removido ou renomeado) → atualizar `docs/architecture/src/module-graph.mmd` e regenerar `module-graph.svg`
+- Mudança na lógica de multi-tenancy → atualizar `docs/architecture/src/multitenancy-flow.mmd`
+- Decisões de arquitetura cross-cutting → criar ou atualizar um ADR em `docs/ADR-*.md`
+
 ---
 
 ## 🏗️ Estrutura de pastas relevante
@@ -181,3 +189,4 @@ O `GetAllIssuesQuery` implementa `ICacheable` com prefixo `"issues-list"`. A cha
 - [ ] Novos E2E adicionados para o fluxo implementado (se aplicável)
 - [ ] `git rebase origin/main` feito antes do push final
 - [ ] Sem `console.log` de debug no código final
+- [ ] **Documentação atualizada** — README, docs/architecture, ADRs conforme regra #6

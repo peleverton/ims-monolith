@@ -1,0 +1,43 @@
+flowchart TD
+    REQ(["🌐 HTTP Request\nX-Tenant-ID: alpha"])
+
+    subgraph MIDDLEWARE["ASP.NET Core Pipeline"]
+        direction TB
+        T1["TenantResolutionMiddleware\n→ resolve tenant from header / subdomain"]
+        T2["TenantContext\n→ set ITenantService.CurrentTenant"]
+        T3["AuthMiddleware\n→ validate JWT, check tenant claim"]
+        T4["UserContextMiddleware\n→ set IUserContext.UserId"]
+    end
+
+    subgraph CQRS["CQRS Pipeline (MediatR)"]
+        direction TB
+        P1["ValidationBehavior\n→ FluentValidation rules"]
+        P2["CachingBehavior\n→ key = '{prefix}:{tenantId}:{hash}'"]
+        P3["AuditBehavior\n→ write to AuditLog (tenantId stamped)"]
+        P4["CommandHandler / QueryHandler"]
+    end
+
+    subgraph DATA["Data Layer"]
+        direction LR
+        EF["TenantAwareDbContext\n→ HasQueryFilter(e.TenantId == current)\n→ OnSave: stamp TenantId"]
+        DAPPER["Dapper Queries\n→ WHERE TenantId = @tenantId\n→ explicit in every query"]
+        REDIS["Redis Cache\n→ keys include tenantId segment\n→ no cross-tenant leakage"]
+    end
+
+    DB[("PostgreSQL\nshared schema\nmulti-tenant rows")]
+
+    REQ --> T1 --> T2 --> T3 --> T4
+    T4  --> P1 --> P2 --> P3 --> P4
+    P4  --> EF & DAPPER
+    P2  --> REDIS
+    EF  --> DB
+    DAPPER --> DB
+
+    note1["⚠️ CachingBehavior fix (US-080)\nkey format prevents cross-tenant\ncache poisoning"]
+
+    P2 -.->|"uses"| note1
+
+    style MIDDLEWARE fill:#dbeafe,stroke:#3b82f6
+    style CQRS fill:#fef9c3,stroke:#eab308
+    style DATA fill:#dcfce7,stroke:#22c55e
+    style note1 fill:#fee2e2,stroke:#ef4444,color:#991b1b

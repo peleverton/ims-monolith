@@ -1,0 +1,57 @@
+flowchart TD
+    subgraph PUBLISHERS["📤 Event Publishers"]
+        direction TB
+        ISS["Issues Module"]
+        INV["Inventory Module"]
+        INVI["InventoryIssues Module"]
+    end
+
+    subgraph EVENTS["⚡ Domain Events (MediatR INotification)"]
+        direction LR
+        E1["IssueCreatedEvent"]
+        E2["IssueStatusChangedEvent"]
+        E3["IssueAssignedEvent"]
+        E4["IssueCompletedEvent"]
+        E5["IssueCommentAddedEvent"]
+        E6["ProductCreatedEvent"]
+        E7["StockChangedEvent"]
+        E8["LowStockAlertEvent"]
+        E9["OutOfStockEvent"]
+        E10["StockReplenishedEvent"]
+        E11["SupplierCreatedEvent"]
+        E12["LocationCreatedEvent"]
+    end
+
+    subgraph CONSUMERS["📥 Event Consumers"]
+        direction TB
+        NOTIF["Notifications Module\n(SignalR push)"]
+        SRCH["Search Module\n(Meilisearch index)"]
+        HOOK["Webhooks Module\n(HTTP outbound)"]
+        AUDIT["Audit Module\n(immutable log)"]
+    end
+
+    subgraph INFRA["🏗️ Shared Kernel (cross-cutting)"]
+        PIPE["CQRS Pipeline Behaviors\n(Logging · Caching · Validation · Audit)"]
+        OUTB["Transactional Outbox\n(reliable event delivery)"]
+        CACHE["Redis Cache\n(tenant-scoped keys)"]
+    end
+
+    ISS  --> E1 & E2 & E3 & E4 & E5
+    INV  --> E6 & E7 & E8 & E9 & E10 & E11 & E12
+    INVI --> E8 & E9
+
+    E1 --> SRCH & HOOK & NOTIF
+    E4 --> HOOK & NOTIF
+    E2 & E3 & E5 --> NOTIF
+    E6 --> SRCH
+    E7 & E8 & E9 & E10 --> NOTIF
+    E11 & E12 --> NOTIF
+
+    ISS & INV --> PIPE
+    PIPE --> OUTB --> AUDIT
+    PIPE --> CACHE
+
+    style PUBLISHERS fill:#dbeafe,stroke:#3b82f6
+    style EVENTS fill:#fef9c3,stroke:#eab308
+    style CONSUMERS fill:#dcfce7,stroke:#22c55e
+    style INFRA fill:#f3e8ff,stroke:#a855f7

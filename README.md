@@ -36,6 +36,20 @@ A modular monolith issue and inventory management system built with .NET 9, feat
 
 IMS follows a **Modular Monolith** architecture — a single deployable unit where each business domain is an isolated module with its own layers, data access, and API surface.
 
+### 📐 Architecture Diagrams
+
+Full C4 diagrams, module event graph, and multi-tenancy flow are available in [`docs/architecture/`](./docs/architecture/).
+
+| Diagram | |
+|---|---|
+| [C4 Context](./docs/architecture/c4-context.svg) | System boundaries and external actors |
+| [C4 Container](./docs/architecture/c4-container.svg) | Deployable containers and their relationships |
+| [C4 Component](./docs/architecture/c4-component.svg) | Backend API internal module breakdown |
+| [Module Event Graph](./docs/architecture/module-graph.svg) | Who publishes / consumes which domain events |
+| [Multi-Tenancy Flow](./docs/architecture/multitenancy-flow.svg) | Tenant isolation through middleware → CQRS → data |
+
+> Diagrams are regenerated automatically on every merge to `main` via [generate-diagrams](./.github/workflows/generate-diagrams.yml). Source files: [`docs/architecture/src/`](./docs/architecture/src/).
+
 ```
 ┌────────────────────────────────────────────────────────────────────────────┐
 │                          Program.cs (Composition Root)                    │
