@@ -68,12 +68,10 @@ public static class JobsModuleExtensions
 
     public static void UseJobsModule(this WebApplication app)
     {
-        var tenantService = app.Services.GetRequiredService<ITenantService>();
-
-        // US-086: Dashboard with tenant-aware auth filter
+        // US-086: Dashboard with tenant-aware auth filter (resolves ITenantService per-request)
         app.UseHangfireDashboard("/hangfire", new DashboardOptions
         {
-            Authorization = [new TenantAwareHangfireDashboardFilter(tenantService)],
+            Authorization = [new TenantAwareHangfireDashboardFilter()],
             AppPath = "/",
             DashboardTitle = "IMS — Background Jobs",
         });

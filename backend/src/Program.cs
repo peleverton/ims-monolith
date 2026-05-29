@@ -20,6 +20,7 @@ using IMS.Modular.Modules.InventoryIssues;
 using IMS.Modular.Modules.InventoryIssues.Api;
 using IMS.Modular.Modules.Issues;
 using IMS.Modular.Modules.Issues.Api;
+using IMS.Modular.Modules.Jobs;
 using IMS.Modular.Modules.Notifications;
 using IMS.Modular.Modules.Notifications.Api;
 using IMS.Modular.Modules.Webhooks;
@@ -179,6 +180,9 @@ builder.Services.AddSearchModule(builder.Configuration);
 // US-091: Billing & Subscription
 builder.Services.AddBillingModule(builder.Configuration, builder.Environment);
 
+// US-086/092: Background Jobs (Hangfire)
+builder.Services.AddJobsModule(builder.Configuration, builder.Environment);
+
 // US-079: YARP proxy for Issues microservice (only active when UseIssuesMicroservice flag is on)
 builder.Services.AddIssuesProxy(builder.Configuration);
 
@@ -313,6 +317,9 @@ FeaturesModule.Map(app);
 BillingModule.Map(app);
 // US-080: Tenant management API
 TenantEndpoints.Map(app);
+
+// US-086/092: Hangfire dashboard + recurring jobs
+app.UseJobsModule();
 
 // US-083: Audit log API
 app.MapAuditModule();

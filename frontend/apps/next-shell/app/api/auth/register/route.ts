@@ -6,11 +6,20 @@ const IMS_API = process.env.IMS_API_URL ?? "http://localhost:5049";
 export async function POST(request: NextRequest) {
   const body = await request.json();
 
-  const upstream = await fetch(`${IMS_API}/api/auth/register`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  let upstream: Response;
+  try {
+    upstream = await fetch(`${IMS_API}/api/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(8_000),
+    });
+  } catch {
+    return NextResponse.json(
+      { message: "Serviço indisponível" },
+      { status: 503 }
+    );
+  }
 
   if (!upstream.ok) {
     const err = await upstream.json().catch(() => ({ message: "Registration failed" }));

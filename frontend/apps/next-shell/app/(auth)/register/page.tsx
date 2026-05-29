@@ -25,20 +25,24 @@ export default function RegisterPage() {
   } = useForm<FormData>({ resolver: zodResolver(schema) });
 
   const onSubmit = async (data: FormData) => {
-    const res = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
 
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      toast.error(err.message ?? "Erro ao criar conta");
-      return;
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast.error(err.message ?? "Erro ao criar conta");
+        return;
+      }
+
+      toast.success("Conta criada! Faça login para continuar.");
+      router.push("/login");
+    } catch {
+      toast.error("Erro ao criar conta");
     }
-
-    toast.success("Conta criada! Faça login para continuar.");
-    router.push("/login");
   };
 
   return (

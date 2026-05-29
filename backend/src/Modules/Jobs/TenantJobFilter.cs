@@ -4,6 +4,7 @@ using Hangfire.Common;
 using Hangfire.Server;
 using Hangfire.States;
 using IMS.Modular.Shared.MultiTenancy;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace IMS.Modular.Modules.Jobs;
 
@@ -17,20 +18,22 @@ public sealed class TenantJobFilter : JobFilterAttribute, IClientFilter, IServer
 {
     public const string TenantParameterKey = "TenantId";
 
-    private readonly ITenantService _tenantService;
+    private readonly IServiceScopeFactory _scopeFactory;
 
-    public TenantJobFilter(ITenantService tenantService)
+    public TenantJobFilter(IServiceScopeFactory scopeFactory)
     {
-        _tenantService = tenantService;
+        _scopeFactory = scopeFactory;
     }
 
     // ── IClientFilter ──────────────────────────────────────────────────────
 
     public void OnCreating(CreatingContext context)
     {
-        if (_tenantService.IsMultiTenancyEnabled && !string.IsNullOrEmpty(_tenantService.TenantId))
+        using var scope = _scopeFactory.CreateScope();
+        var tenantService = scope.ServiceProvider.GetService<ITenantService>();
+        if (tenantService?.IsMultiTenancyEnabled == true && !string.IsNullOrEmpty(tenantService.TenantId))
         {
-            context.SetJobParameter(TenantParameterKey, _tenantService.TenantId);
+            context.SetJobParameter(TenantParameterKey, tenantService.TenantId);
         }
     }
 

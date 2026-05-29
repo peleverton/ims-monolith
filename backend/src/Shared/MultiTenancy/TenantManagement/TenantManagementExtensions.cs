@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using IMS.Modular.Shared.Database;
 
 namespace IMS.Modular.Shared.MultiTenancy.TenantManagement;
 
@@ -30,18 +31,8 @@ public static class TenantManagementExtensions
 
     /// <summary>
     /// Applies EF Core migrations for the Tenants catalog.
-    /// SQLite (test/dev): falls back to EnsureCreated (no migration runner needed).
-    /// PostgreSQL (staging/prod): always runs MigrateAsync (idempotent).
+    /// Uses the shared ApplyMigrationsAsync helper which handles shared SQLite files correctly.
     /// </summary>
     public static async Task InitializeTenantDbAsync(this IServiceProvider services)
-    {
-        using var scope = services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<TenantDbContext>();
-
-        var isSqlite = db.Database.ProviderName?.Contains("Sqlite", StringComparison.OrdinalIgnoreCase) == true;
-        if (isSqlite)
-            await db.Database.EnsureCreatedAsync();
-        else
-            await db.Database.MigrateAsync(); // idempotent — safe to run on every startup
-    }
+        => await services.ApplyMigrationsAsync<TenantDbContext>();
 }
