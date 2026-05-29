@@ -45,6 +45,15 @@ public interface IAnalyticsReadRepository
 
 public class AnalyticsReadRepository(IDbConnection connection) : IAnalyticsReadRepository
 {
+    // SQLite-compatible SQL helpers — uses provider detection to emit correct SQL fragments.
+    private bool IsSqlite => connection.GetType().Name.Contains("Sqlite", StringComparison.OrdinalIgnoreCase);
+    private string HoursBetween(string startCol, string endCol) => IsSqlite
+        ? $"(julianday({endCol}) - julianday({startCol})) * 24.0"
+        : $"EXTRACT(EPOCH FROM ({endCol} - {startCol})) / 3600.0";
+    private string DaysBetween(string startCol, string endCol) => IsSqlite
+        ? $"CAST(julianday({endCol}) - julianday({startCol}) AS INTEGER)"
+        : $"CAST(EXTRACT(EPOCH FROM ({endCol} - {startCol})) / 86400 AS INTEGER)";
+
     // ── Issue Analytics ───────────────────────────────────────────────────
 
     public async Task<IssueSummaryDto> GetIssueSummaryAsync(CancellationToken ct = default)
@@ -57,8 +66,8 @@ public class AnalyticsReadRepository(IDbConnection connection) : IAnalyticsReadR
                 SUM(CASE WHEN "Status" = 'Testing'     THEN 1 ELSE 0 END)                                        AS Testing,
                 SUM(CASE WHEN "Status" = 'Resolved'    THEN 1 ELSE 0 END)                                        AS Resolved,
                 SUM(CASE WHEN "Status" = 'Closed'      THEN 1 ELSE 0 END)                                        AS Closed,
-                SUM(CASE WHEN "DueDate" < NOW() AND "Status" NOT IN ('Resolved','Closed') THEN 1 ELSE 0 END)      AS Overdue,
-                SUM(CASE WHEN "DueDate"::date = CURRENT_DATE AND "Status" NOT IN ('Resolved','Closed') THEN 1 ELSE 0 END) AS DueToday
+                SUM(CASE WHEN "DueDate" < CURRENT_TIMESTAMP AND "Status" NOT IN ('Resolved','Closed') THEN 1 ELSE 0 END)      AS Overdue,
+                SUM(CASE WHEN date("DueDate") = CURRENT_DATE AND "Status" NOT IN ('Resolved','Closed') THEN 1 ELSE 0 END) AS DueToday
             FROM "Issues"
             """;
         var row = await connection.QuerySingleAsync<dynamic>(sql);
@@ -72,28 +81,29 @@ public class AnalyticsReadRepository(IDbConnection connection) : IAnalyticsReadR
     {
         var sql = $"""
             SELECT
-                TO_CHAR("CreatedAt", 'YYYY-MM-DD')                       AS "Date",
+                date("CreatedAt")                                         AS "Date",
                 COUNT(*)                                                  AS "Created",
                 SUM(CASE WHEN "Status" = 'Resolved' THEN 1 ELSE 0 END)  AS "Resolved",
                 SUM(CASE WHEN "Status" = 'Closed'   THEN 1 ELSE 0 END)  AS "Closed"
             FROM "Issues"
-            WHERE "CreatedAt" >= NOW() - INTERVAL '{days} days'
-            GROUP BY TO_CHAR("CreatedAt", 'YYYY-MM-DD')
+            WHERE "CreatedAt" >= @Cutoff
+            GROUP BY date("CreatedAt")
             ORDER BY "Date" ASC
             """;
-        var rows = await connection.QueryAsync<IssueTrendDto>(sql);
+        var rows = await connection.QueryAsync<IssueTrendDto>(sql, new { Cutoff = DateTime.UtcNow.AddDays(-days) });
         return rows.AsList();
     }
 
     public async Task<IReadOnlyList<IssueResolutionTimeDto>> GetIssueResolutionTimeAsync(CancellationToken ct = default)
     {
-        const string sql = """
+        var hb = HoursBetween("\"CreatedAt\"", "\"UpdatedAt\"");
+        var sql = $"""
             SELECT
                 "Priority",
-                AVG(EXTRACT(EPOCH FROM ("UpdatedAt" - "CreatedAt")) / 3600.0) AS "AvgResolutionHours",
-                MIN(EXTRACT(EPOCH FROM ("UpdatedAt" - "CreatedAt")) / 3600.0) AS "MinResolutionHours",
-                MAX(EXTRACT(EPOCH FROM ("UpdatedAt" - "CreatedAt")) / 3600.0) AS "MaxResolutionHours",
-                COUNT(*)                                                        AS "SampleSize"
+                AVG({hb}) AS "AvgResolutionHours",
+                MIN({hb}) AS "MinResolutionHours",
+                MAX({hb}) AS "MaxResolutionHours",
+                COUNT(*)   AS "SampleSize"
             FROM "Issues"
             WHERE "Status" IN ('Resolved', 'Closed') AND "UpdatedAt" IS NOT NULL
             GROUP BY "Priority"
@@ -150,13 +160,14 @@ public class AnalyticsReadRepository(IDbConnection connection) : IAnalyticsReadR
 
     public async Task<IReadOnlyList<AssignSuggestionDto>> GetAssignSuggestionsAsync(CancellationToken ct = default)
     {
-        const string sql = """
+        var hb = HoursBetween("\"CreatedAt\"", "\"UpdatedAt\"");
+        var sql = $"""
             SELECT
                 "AssigneeId" AS "UserId",
                 SUM(CASE WHEN "Status" IN ('Open','InProgress') THEN 1 ELSE 0 END)     AS "CurrentLoad",
                 SUM(CASE WHEN "Status" IN ('Resolved','Closed') THEN 1 ELSE 0 END)     AS "Resolved",
                 AVG(CASE WHEN "Status" IN ('Resolved','Closed') AND "UpdatedAt" IS NOT NULL
-                    THEN EXTRACT(EPOCH FROM ("UpdatedAt" - "CreatedAt")) / 3600.0 END) AS "AvgResolutionHours"
+                    THEN {hb} END)                                                      AS "AvgResolutionHours"
             FROM "Issues"
             WHERE "AssigneeId" IS NOT NULL
             GROUP BY "AssigneeId"
@@ -178,7 +189,7 @@ public class AnalyticsReadRepository(IDbConnection connection) : IAnalyticsReadR
                 SUM(CASE WHEN "Status" = 'InProgress' THEN 1 ELSE 0 END) AS "InProgress",
                 SUM(CASE WHEN "Status" = 'Resolved'   THEN 1 ELSE 0 END) AS "Resolved",
                 SUM(CASE WHEN "Status" = 'Closed'     THEN 1 ELSE 0 END) AS "Closed",
-                SUM(CASE WHEN "DueDate" < NOW() AND "Status" NOT IN ('Resolved','Closed') THEN 1 ELSE 0 END) AS "Overdue"
+                SUM(CASE WHEN "DueDate" < CURRENT_TIMESTAMP AND "Status" NOT IN ('Resolved','Closed') THEN 1 ELSE 0 END) AS "Overdue"
             FROM "Issues"
             WHERE "AssigneeId" IS NOT NULL
             GROUP BY "AssigneeId"
@@ -189,7 +200,8 @@ public class AnalyticsReadRepository(IDbConnection connection) : IAnalyticsReadR
 
     public async Task<UserWorkloadDetailDto?> GetUserWorkloadAsync(Guid userId, CancellationToken ct = default)
     {
-        const string sql = """
+        var hb = HoursBetween("\"CreatedAt\"", "\"UpdatedAt\"");
+        var sql = $"""
             SELECT
                 "AssigneeId" AS "UserId",
                 COUNT(*) AS "TotalAssigned",
@@ -197,9 +209,9 @@ public class AnalyticsReadRepository(IDbConnection connection) : IAnalyticsReadR
                 SUM(CASE WHEN "Status" = 'InProgress' THEN 1 ELSE 0 END) AS "InProgress",
                 SUM(CASE WHEN "Status" = 'Resolved'   THEN 1 ELSE 0 END) AS "Resolved",
                 SUM(CASE WHEN "Status" = 'Closed'     THEN 1 ELSE 0 END) AS "Closed",
-                SUM(CASE WHEN "DueDate" < NOW() AND "Status" NOT IN ('Resolved','Closed') THEN 1 ELSE 0 END) AS "Overdue",
+                SUM(CASE WHEN "DueDate" < CURRENT_TIMESTAMP AND "Status" NOT IN ('Resolved','Closed') THEN 1 ELSE 0 END) AS "Overdue",
                 AVG(CASE WHEN "Status" IN ('Resolved','Closed') AND "UpdatedAt" IS NOT NULL
-                    THEN EXTRACT(EPOCH FROM ("UpdatedAt" - "CreatedAt")) / 3600.0 END) AS "AvgResolutionHours",
+                    THEN {hb} END)                                         AS "AvgResolutionHours",
                 ROUND(SUM(CASE WHEN "Status" IN ('Resolved','Closed') THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) AS "CompletionRate"
             FROM "Issues"
             WHERE UPPER(CAST("AssigneeId" AS TEXT)) = @UserId
@@ -210,12 +222,13 @@ public class AnalyticsReadRepository(IDbConnection connection) : IAnalyticsReadR
 
     public async Task<UserStatisticsDto?> GetUserStatisticsAsync(Guid userId, CancellationToken ct = default)
     {
-        const string sql = """
+        var hb = HoursBetween("\"CreatedAt\"", "\"UpdatedAt\"");
+        var sql = $"""
             SELECT
                 "AssigneeId" AS "UserId",
                 SUM(CASE WHEN "Status" IN ('Resolved','Closed') THEN 1 ELSE 0 END) AS "TotalResolved",
                 AVG(CASE WHEN "Status" IN ('Resolved','Closed') AND "UpdatedAt" IS NOT NULL
-                    THEN EXTRACT(EPOCH FROM ("UpdatedAt" - "CreatedAt")) / 3600.0 END) AS "AvgResolutionHours",
+                    THEN {hb} END)                                                  AS "AvgResolutionHours",
                 ROUND(SUM(CASE WHEN "Status" IN ('Resolved','Closed') THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) AS "CompletionRate",
                 SUM(CASE WHEN "Status" IN ('Open','InProgress') THEN 1 ELSE 0 END) AS "CurrentLoad"
             FROM "Issues"
@@ -309,17 +322,17 @@ public class AnalyticsReadRepository(IDbConnection connection) : IAnalyticsReadR
     {
         var sql = $"""
             SELECT
-                TO_CHAR("MovementDate", 'YYYY-MM-DD') AS Date,
+                date("MovementDate") AS Date,
                 SUM(CASE WHEN "MovementType" IN ('StockIn','Purchase','InitialStock','Return') THEN "Quantity" ELSE 0 END) AS TotalIn,
                 SUM(CASE WHEN "MovementType" IN ('StockOut','Sale','Damage','Loss','Expired')  THEN "Quantity" ELSE 0 END) AS TotalOut,
                 SUM(CASE WHEN "MovementType" IN ('StockIn','Purchase','InitialStock','Return') THEN "Quantity" ELSE 0 END) -
                 SUM(CASE WHEN "MovementType" IN ('StockOut','Sale','Damage','Loss','Expired')  THEN "Quantity" ELSE 0 END) AS NetChange
             FROM "StockMovements"
-            WHERE "MovementDate" >= NOW() - INTERVAL '{days} days'
-            GROUP BY TO_CHAR("MovementDate", 'YYYY-MM-DD')
+            WHERE "MovementDate" >= @Cutoff
+            GROUP BY date("MovementDate")
             ORDER BY Date ASC
             """;
-        return (await connection.QueryAsync<StockTrendDto>(sql)).AsList();
+        return (await connection.QueryAsync<StockTrendDto>(sql, new { Cutoff = DateTime.UtcNow.AddDays(-days) })).AsList();
     }
 
     public async Task<IReadOnlyList<CategoryDistributionDto>> GetCategoryDistributionAsync(CancellationToken ct = default)
@@ -356,20 +369,21 @@ public class AnalyticsReadRepository(IDbConnection connection) : IAnalyticsReadR
 
     public async Task<IReadOnlyList<ExpiringProductDto>> GetExpiringProductsAsync(int daysAhead, int page, int pageSize, CancellationToken ct = default)
     {
+        var db = DaysBetween("CURRENT_TIMESTAMP", "\"ExpiryDate\"");
         var sql = $"""
             SELECT
                 "Id" AS ProductId, "Name" AS ProductName, "SKU",
                 "CurrentStock", "ExpiryDate",
-                CAST(EXTRACT(EPOCH FROM ("ExpiryDate" - NOW())) / 86400 AS INTEGER) AS DaysUntilExpiry
+                {db} AS DaysUntilExpiry
             FROM "Products"
             WHERE "ExpiryDate" IS NOT NULL
-              AND "ExpiryDate" <= NOW() + INTERVAL '{daysAhead} days'
-              AND "ExpiryDate" >= NOW()
+              AND "ExpiryDate" <= @MaxDate
+              AND "ExpiryDate" >= CURRENT_TIMESTAMP
               AND "IsActive" = TRUE
             ORDER BY "ExpiryDate" ASC
             LIMIT {pageSize} OFFSET {(page - 1) * pageSize}
             """;
-        return (await connection.QueryAsync<ExpiringProductDto>(sql)).AsList();
+        return (await connection.QueryAsync<ExpiringProductDto>(sql, new { MaxDate = DateTime.UtcNow.AddDays(daysAhead) })).AsList();
     }
 
     public async Task<IReadOnlyList<LocationCapacityDto>> GetLocationCapacityAsync(CancellationToken ct = default)

@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(8_000),
     });
   } catch {
     return NextResponse.json({ message: "Serviço indisponível" }, { status: 503 });

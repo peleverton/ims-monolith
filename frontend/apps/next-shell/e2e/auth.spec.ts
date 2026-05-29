@@ -29,6 +29,7 @@ test.describe("Login", () => {
   });
 
   test("exibe erro para credenciais inválidas", async ({ page }) => {
+    test.skip(!backendAvailable, "Requires live backend to return 401 (set E2E_BACKEND_AVAILABLE=true)");
     await page.getByLabel(/usuário|username/i).fill("invalido");
     await page.getByLabel(/senha|password/i).fill("senhaerrada");
     await page.getByRole("button", { name: /entrar|login/i }).click();
@@ -94,6 +95,7 @@ test.describe("Registro", () => {
   });
 
   test("exibe erro para email já cadastrado", async ({ page }) => {
+    test.skip(!backendAvailable, "Requires live backend to return 409 (set E2E_BACKEND_AVAILABLE=true)");
     await page.goto("/register");
     await page.getByLabel(/usuário|username/i).fill("admin");
     await page.getByLabel(/e-mail|email/i).fill(

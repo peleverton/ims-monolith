@@ -25,6 +25,7 @@ using System.Data;
 using Microsoft.Data.Sqlite;
 using Microsoft.FeatureManagement;
 using IMS.Modular.Modules.Audit.Infrastructure;
+using IMS.Modular.Modules.Billing.Infrastructure;
 
 namespace IMS.Modular.Tests.Integration;
 
@@ -140,6 +141,8 @@ public class IntegrationWebAppFactory : WebApplicationFactory<Program>, IDisposa
             ReplaceDbContextWithSqlite<TenantDbContext>(services, _sharedConnStr);
             // US-083: AuditDbContext
             ReplaceDbContextWithSqlite<AuditDbContext>(services, _sharedConnStr);
+            // US-091: BillingDbContext
+            ReplaceDbContextWithSqlite<BillingDbContext>(services, _sharedConnStr);
 
             // Replace Dapper IDbConnection to use the Inventory SQLite file
             services.RemoveAll<IDbConnection>();
