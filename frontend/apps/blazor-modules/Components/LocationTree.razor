@@ -1,0 +1,80 @@
+@using BlazorModules.Models
+@using BlazorModules.Services
+@inject ILocationService LocationService
+
+<MudThemeProvider />
+
+<MudPaper Class="pa-4" Elevation="2">
+    <MudText Typo="Typo.h5" Class="mb-4">
+        <MudIcon Icon="@Icons.Material.Filled.AccountTree" Class="mr-2" />
+        Hierarquia de Locais
+    </MudText>
+
+    @if (_loading)
+    {
+        <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Large" />
+        <MudText Typo="Typo.body2" Class="mt-2">Carregando locais...</MudText>
+    }
+    else if (_error is not null)
+    {
+        <MudAlert Severity="Severity.Error">@_error</MudAlert>
+    }
+    else if (_roots.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info">Nenhum local cadastrado.</MudAlert>
+    }
+    else
+    {
+        <MudTextField @bind-Value="_searchTerm"
+                      Placeholder="Buscar local..."
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      Immediate="true"
+                      Class="mb-4" />
+
+        <MudTreeView T="LocationTreeNode"
+                     Items="@_treeItems"
+                     Dense="true"
+                     Hover="true"
+                     ExpandOnClick="true">
+            <ItemTemplate Context="item">
+                <MudTreeViewItem T="LocationTreeNode"
+                                 Value="@item.Value"
+                                 Items="@item.Children"
+                                 Expanded="@item.Expanded"
+                                 ExpandedChanged="@(expanded => item.Expanded = expanded)">
+                    <BodyContent>
+                        <div class="d-flex align-center gap-2">
+                            <MudText Typo="Typo.body2">@item.Value!.Icon</MudText>
+                            <MudText Typo="Typo.body1" Class="@(item.Value!.IsActive ? "" : "mud-text-disabled")">
+                                @item.Value!.Name
+                            </MudText>
+                            <MudChip T="string" Size="Size.Small" Color="@GetTypeColor(item.Value!.Type)">
+                                @item.Value!.Code
+                            </MudChip>
+                            @if (!item.Value!.IsLeaf)
+                            {
+                                <MudText Typo="Typo.caption" Class="ml-2" Color="Color.Secondary">
+                                    (@item.Value!.Children.Count)
+                                </MudText>
+                            }
+                            @if (item.Value!.Capacity > 0)
+                            {
+                                <MudTooltip Text="@($"Capacidade: {item.Value!.Capacity}")">
+                                    <MudIcon Icon="@Icons.Material.Filled.Inventory2"
+                                             Size="Size.Small"
+                                             Color="Color.Default" />
+                                </MudTooltip>
+                            }
+                        </div>
+                    </BodyContent>
+                </MudTreeViewItem>
+            </ItemTemplate>
+        </MudTreeView>
+
+        <MudDivider Class="my-3" />
+        <MudText Typo="Typo.caption" Color="Color.Secondary">
+            Total: @_totalLocations locais | @_roots.Count raízes | Profundidade máx: @_maxDepth
+        </MudText>
+    }
+</MudPaper>

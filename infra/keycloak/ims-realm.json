@@ -79,7 +79,6 @@
       "standardFlowEnabled": true,
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": false,
-      "pkceCodeChallengeMethod": "S256",
       "redirectUris": [
         "http://localhost:3000/api/auth/keycloak-callback",
         "http://localhost:3000/*"

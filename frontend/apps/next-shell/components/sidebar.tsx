@@ -12,6 +12,8 @@ import {
   Menu,
   X,
   Users,
+  BrainCircuit,
+  Map,
 } from "lucide-react";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
@@ -33,6 +35,8 @@ export function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
     { href: "/issues", label: t("issues"), icon: AlertCircle },
     { href: "/inventory", label: t("inventory"), icon: Package },
     { href: "/analytics", label: t("analytics"), icon: BarChart3 },
+    { href: "/smart-assigner", label: "Smart Assigner", icon: BrainCircuit },
+    { href: "/warehouse-map", label: "Mapa Armazém", icon: Map },
     ...(isAdmin
       ? [{ href: "/admin/users", label: t("users"), icon: Users }]
       : []),
