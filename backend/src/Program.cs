@@ -11,6 +11,10 @@ using IMS.Modular.Modules.Auth.Api;
 using IMS.Modular.Modules.Billing;
 using IMS.Modular.Modules.Billing.Api;
 using IMS.Modular.Modules.Billing.Application.Behaviors;
+using IMS.Modular.Modules.SmartAssigner;
+using IMS.Modular.Modules.SmartAssigner.Api;
+using IMS.Modular.Modules.WarehouseRouting;
+using IMS.Modular.Modules.WarehouseRouting.Api;
 using IMS.Modular.Modules.Features.Api;
 using IMS.Modular.Modules.Search;
 using IMS.Modular.Modules.Search.Api;
@@ -183,6 +187,12 @@ builder.Services.AddBillingModule(builder.Configuration, builder.Environment);
 // US-086/092: Background Jobs (Hangfire)
 builder.Services.AddJobsModule(builder.Configuration, builder.Environment);
 
+// Epic 2: Smart Assigner — auto-assignment engine
+builder.Services.AddSmartAssignerModule(builder.Configuration);
+
+// Epic 1: Warehouse Routing — optimal pickup path calculation
+builder.Services.AddWarehouseRoutingModule(builder.Configuration);
+
 // US-079: YARP proxy for Issues microservice (only active when UseIssuesMicroservice flag is on)
 builder.Services.AddIssuesProxy(builder.Configuration);
 
@@ -315,6 +325,10 @@ SearchModule.Map(app);
 FeaturesModule.Map(app);
 // US-091: Billing & Subscription
 BillingModule.Map(app);
+// Epic 2: Smart Assigner API
+SmartAssignerModule.Map(app);
+// Epic 1: Warehouse Routing API
+WarehouseRoutingModule.Map(app);
 // US-080: Tenant management API
 TenantEndpoints.Map(app);
 

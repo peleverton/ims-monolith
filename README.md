@@ -249,7 +249,7 @@ docker compose up -d
 | Redis | localhost:6379 |
 | RabbitMQ UI | http://localhost:15672 (ims / ims) |
 
-> Default login: `admin@ims.com` / `Admin@123`
+> Default login: **Username:** `admin` / **Password:** `Admin@123!`
 
 ### (Optional) With Observability
 
@@ -281,7 +281,7 @@ curl http://localhost:5049/health/ping
 # Login with seed admin
 TOKEN=$(curl -s -X POST http://localhost:5049/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@ims.com","password":"Admin@123"}' | jq -r '.token')
+  -d '{"username":"admin","password":"Admin@123!"}' | jq -r '.accessToken')
 
 echo "Token: $TOKEN"
 
@@ -478,7 +478,7 @@ On first startup, the system creates:
 | Entity | Details |
 |--------|---------|
 | Roles | `Admin`, `User` |
-| Admin User | **Email:** `admin@ims.com` **Password:** `Admin@123` |
+| Admin User | **Username:** `admin` **Email:** `admin@ims.com` **Password:** `Admin@123!` |
 
 ### Configuration
 

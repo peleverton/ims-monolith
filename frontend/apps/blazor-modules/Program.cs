@@ -22,6 +22,7 @@ builder.Services.AddScoped(_ => new HttpClient
 
 // ── Serviços de negócio ───────────────────────────────────────
 builder.Services.AddScoped<IInventoryService, InventoryService>();
+builder.Services.AddScoped<ILocationService, LocationService>();
 builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
 builder.Services.AddScoped<IAuthBridgeService, AuthBridgeService>();
 
@@ -29,6 +30,7 @@ builder.Services.AddScoped<IAuthBridgeService, AuthBridgeService>();
 // Método disponível via Microsoft.AspNetCore.Components.Web no .NET 9 Blazor WASM
 builder.RootComponents.RegisterCustomElement<InventoryGrid>("inventory-grid");
 builder.RootComponents.RegisterCustomElement<AnalyticsDashboard>("analytics-dashboard");
+builder.RootComponents.RegisterCustomElement<LocationTree>("location-tree");
 
 // Head outlet para standalone
 builder.RootComponents.Add<HeadOutlet>("head::after");
