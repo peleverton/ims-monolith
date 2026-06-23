@@ -31,6 +31,17 @@ public class Product : BaseEntity
     public StockStatus StockStatus { get; private set; }
     public bool IsActive { get; private set; } = true;
 
+    // ── Physical Dimensions (Epic 2: Bin Packing) ───────────────────
+    public decimal? WeightKg { get; private set; }
+    public decimal? LengthCm { get; private set; }
+    public decimal? WidthCm { get; private set; }
+    public decimal? HeightCm { get; private set; }
+
+    /// <summary>Calculated volume in cm³. Null if dimensions not set.</summary>
+    public decimal? VolumeCm3 => LengthCm.HasValue && WidthCm.HasValue && HeightCm.HasValue
+        ? LengthCm.Value * WidthCm.Value * HeightCm.Value
+        : null;
+
     private Product() { }
 
     public Product(
@@ -163,6 +174,15 @@ public class Product : BaseEntity
     public void SetSupplier(Guid? supplierId)
     {
         SupplierId = supplierId;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetDimensions(decimal? weightKg, decimal? lengthCm, decimal? widthCm, decimal? heightCm)
+    {
+        WeightKg = weightKg;
+        LengthCm = lengthCm;
+        WidthCm = widthCm;
+        HeightCm = heightCm;
         UpdatedAt = DateTime.UtcNow;
     }
 

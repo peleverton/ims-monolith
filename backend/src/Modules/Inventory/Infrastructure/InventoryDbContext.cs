@@ -44,6 +44,12 @@ public class InventoryDbContext(
             entity.Property(e => e.UnitPrice).HasPrecision(18, 2);
             entity.Property(e => e.CostPrice).HasPrecision(18, 2);
             entity.Property(e => e.TenantId).HasMaxLength(50);
+            // Epic 2: Physical dimensions for bin packing
+            entity.Property(e => e.WeightKg).HasPrecision(10, 3);
+            entity.Property(e => e.LengthCm).HasPrecision(10, 2);
+            entity.Property(e => e.WidthCm).HasPrecision(10, 2);
+            entity.Property(e => e.HeightCm).HasPrecision(10, 2);
+            entity.Ignore(e => e.VolumeCm3);
             entity.HasIndex(e => e.SKU).IsUnique();
             entity.HasIndex(e => e.Category);
             entity.HasIndex(e => e.StockStatus);

@@ -26,6 +26,10 @@ using Microsoft.Data.Sqlite;
 using Microsoft.FeatureManagement;
 using IMS.Modular.Modules.Audit.Infrastructure;
 using IMS.Modular.Modules.Billing.Infrastructure;
+using IMS.Modular.Modules.DemandForecasting.Infrastructure;
+using IMS.Modular.Modules.BinPacking.Infrastructure;
+using IMS.Modular.Modules.MarkdownOptimizer.Infrastructure;
+using IMS.Modular.Modules.AnomalyDetection.Infrastructure;
 
 namespace IMS.Modular.Tests.Integration;
 
@@ -91,6 +95,9 @@ public class IntegrationWebAppFactory : WebApplicationFactory<Program>, IDisposa
     static IntegrationWebAppFactory()
     {
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
+        // Override feature flags BEFORE the host builder reads configuration
+        Environment.SetEnvironmentVariable("FeatureManagement__UseKeycloak", "false");
+        Environment.SetEnvironmentVariable("FeatureManagement__EnableMultiTenancy", "false");
     }
 
     public IntegrationWebAppFactory()
@@ -125,7 +132,10 @@ public class IntegrationWebAppFactory : WebApplicationFactory<Program>, IDisposa
                 ["RateLimiting:Auth:PermitLimit"] = "10000",
                 ["RateLimiting:Auth:WindowSeconds"] = "1",
                 ["RateLimiting:Global:PermitLimit"] = "10000",
-                ["RateLimiting:Global:WindowSeconds"] = "1"
+                ["RateLimiting:Global:WindowSeconds"] = "1",
+                // Force custom JWT auth in tests (Keycloak not available)
+                ["FeatureManagement:UseKeycloak"] = "false",
+                ["FeatureManagement:EnableMultiTenancy"] = "false"
             });
         });
 
@@ -143,6 +153,14 @@ public class IntegrationWebAppFactory : WebApplicationFactory<Program>, IDisposa
             ReplaceDbContextWithSqlite<AuditDbContext>(services, _sharedConnStr);
             // US-091: BillingDbContext
             ReplaceDbContextWithSqlite<BillingDbContext>(services, _sharedConnStr);
+            // Epic 1: DemandForecasting
+            ReplaceDbContextWithSqlite<DemandForecastingDbContext>(services, _sharedConnStr);
+            // Epic 2: BinPacking
+            ReplaceDbContextWithSqlite<BinPackingDbContext>(services, _sharedConnStr);
+            // Epic 3: MarkdownOptimizer
+            ReplaceDbContextWithSqlite<MarkdownOptimizerDbContext>(services, _sharedConnStr);
+            // Epic 4: AnomalyDetection
+            ReplaceDbContextWithSqlite<AnomalyDetectionDbContext>(services, _sharedConnStr);
 
             // Replace Dapper IDbConnection to use the Inventory SQLite file
             services.RemoveAll<IDbConnection>();
@@ -233,6 +251,10 @@ public class IntegrationWebAppFactory : WebApplicationFactory<Program>, IDisposa
         EnsureSchema<OutboxDbContext>(services);
         EnsureSchema<WebhooksDbContext>(services);
         EnsureSchema<AuditDbContext>(services);
+        EnsureSchema<DemandForecastingDbContext>(services);
+        EnsureSchema<BinPackingDbContext>(services);
+        EnsureSchema<MarkdownOptimizerDbContext>(services);
+        EnsureSchema<AnomalyDetectionDbContext>(services);
     }
 
     private static void EnsureSchema<TContext>(IServiceProvider services) where TContext : DbContext

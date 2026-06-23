@@ -2,6 +2,7 @@ using Hangfire;
 using Hangfire.Dashboard;
 using Hangfire.InMemory;
 using Hangfire.PostgreSql;
+using IMS.Modular.Modules.DemandForecasting.Application.Jobs;
 using IMS.Modular.Shared.Abstractions;
 using IMS.Modular.Shared.MultiTenancy;
 using IMS.Modular.Shared.MultiTenancy.TenantManagement;
@@ -119,5 +120,11 @@ public static class JobsModuleExtensions
             "meilisearch-reindex",
             job => job.ExecuteAsync(false),
             "0 5 * * 0");
+
+        // Epic 1: Demand Forecasting — daily at 06:00 UTC
+        manager.AddOrUpdate<DemandForecastJob>(
+            "demand-forecast",
+            job => job.ExecuteAsync(),
+            "0 6 * * *");
     }
 }

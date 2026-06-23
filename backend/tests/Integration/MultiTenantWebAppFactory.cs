@@ -18,6 +18,10 @@ using IMS.Modular.Modules.InventoryIssues.Infrastructure;
 using IMS.Modular.Modules.Webhooks.Infrastructure;
 using IMS.Modular.Modules.Audit.Infrastructure;
 using IMS.Modular.Modules.Billing.Infrastructure;
+using IMS.Modular.Modules.DemandForecasting.Infrastructure;
+using IMS.Modular.Modules.BinPacking.Infrastructure;
+using IMS.Modular.Modules.MarkdownOptimizer.Infrastructure;
+using IMS.Modular.Modules.AnomalyDetection.Infrastructure;
 using IMS.Modular.Shared.MultiTenancy.TenantManagement;
 using IMS.Modular.Shared.Outbox;
 using Microsoft.Extensions.Configuration;
@@ -65,7 +69,11 @@ public class MultiTenantWebAppFactory : WebApplicationFactory<Program>, IDisposa
     public static readonly Guid BetaIssueId    = Guid.Parse("b0000000-0000-0000-0000-000000000002");
 
     static MultiTenantWebAppFactory()
-        => Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
+    {
+        Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
+        // Override UseKeycloak BEFORE the host builder reads configuration
+        Environment.SetEnvironmentVariable("FeatureManagement__UseKeycloak", "false");
+    }
 
     public MultiTenantWebAppFactory()
     {
@@ -110,6 +118,10 @@ public class MultiTenantWebAppFactory : WebApplicationFactory<Program>, IDisposa
             ReplaceDb<TenantDbContext>(services, _sharedConnStr);
             ReplaceDb<AuditDbContext>(services, _sharedConnStr);
             ReplaceDb<BillingDbContext>(services, _sharedConnStr);
+            ReplaceDb<DemandForecastingDbContext>(services, _sharedConnStr);
+            ReplaceDb<BinPackingDbContext>(services, _sharedConnStr);
+            ReplaceDb<MarkdownOptimizerDbContext>(services, _sharedConnStr);
+            ReplaceDb<AnomalyDetectionDbContext>(services, _sharedConnStr);
 
             services.RemoveAll<IDbConnection>();
             services.AddScoped<IDbConnection>(_ => new SqliteConnection(_sharedConnStr));
@@ -155,6 +167,10 @@ public class MultiTenantWebAppFactory : WebApplicationFactory<Program>, IDisposa
         EnsureSchema<WebhooksDbContext>(sp);
         EnsureSchema<AuditDbContext>(sp);
         EnsureSchema<BillingDbContext>(sp);
+        EnsureSchema<DemandForecastingDbContext>(sp);
+        EnsureSchema<BinPackingDbContext>(sp);
+        EnsureSchema<MarkdownOptimizerDbContext>(sp);
+        EnsureSchema<AnomalyDetectionDbContext>(sp);
 
         SeedAuth(sp);
         SeedTenants(sp);

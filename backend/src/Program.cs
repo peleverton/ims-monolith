@@ -15,6 +15,14 @@ using IMS.Modular.Modules.SmartAssigner;
 using IMS.Modular.Modules.SmartAssigner.Api;
 using IMS.Modular.Modules.WarehouseRouting;
 using IMS.Modular.Modules.WarehouseRouting.Api;
+using IMS.Modular.Modules.DemandForecasting;
+using IMS.Modular.Modules.DemandForecasting.Api;
+using IMS.Modular.Modules.MarkdownOptimizer;
+using IMS.Modular.Modules.MarkdownOptimizer.Api;
+using IMS.Modular.Modules.BinPacking;
+using IMS.Modular.Modules.BinPacking.Api;
+using IMS.Modular.Modules.AnomalyDetection;
+using IMS.Modular.Modules.AnomalyDetection.Api;
 using IMS.Modular.Modules.Features.Api;
 using IMS.Modular.Modules.Search;
 using IMS.Modular.Modules.Search.Api;
@@ -193,6 +201,18 @@ builder.Services.AddSmartAssignerModule(builder.Configuration);
 // Epic 1: Warehouse Routing — optimal pickup path calculation
 builder.Services.AddWarehouseRoutingModule(builder.Configuration);
 
+// Epic 1: Demand Forecasting — stockout prediction engine
+builder.Services.AddDemandForecastingModule(builder.Configuration, builder.Environment);
+
+// Epic 3: Markdown Optimizer — dynamic pricing by expiry date
+builder.Services.AddMarkdownOptimizerModule(builder.Configuration, builder.Environment);
+
+// Epic 2: Bin Packing — shipment optimization
+builder.Services.AddBinPackingModule(builder.Configuration, builder.Environment);
+
+// Epic 4: Anomaly Detection — shrinkage & fraud detection
+builder.Services.AddAnomalyDetectionModule(builder.Configuration, builder.Environment);
+
 // US-079: YARP proxy for Issues microservice (only active when UseIssuesMicroservice flag is on)
 builder.Services.AddIssuesProxy(builder.Configuration);
 
@@ -329,6 +349,14 @@ BillingModule.Map(app);
 SmartAssignerModule.Map(app);
 // Epic 1: Warehouse Routing API
 WarehouseRoutingModule.Map(app);
+// Epic 1: Demand Forecasting API
+DemandForecastingModule.Map(app);
+// Epic 3: Markdown Optimizer API
+MarkdownOptimizerModule.Map(app);
+// Epic 2: Bin Packing API
+BinPackingModule.Map(app);
+// Epic 4: Anomaly Detection API
+AnomalyDetectionModule.Map(app);
 // US-080: Tenant management API
 TenantEndpoints.Map(app);
 
@@ -365,6 +393,10 @@ try
     await app.Services.InitializeWebhooksModuleAsync();
     await app.Services.InitializeSearchModuleAsync();
     await app.Services.InitializeBillingModuleAsync();   // US-091
+    await app.UseDemandForecastingModuleAsync();         // Epic 1
+    await app.UseMarkdownOptimizerModuleAsync();         // Epic 3
+    await app.UseBinPackingModuleAsync();                // Epic 2
+    await app.UseAnomalyDetectionModuleAsync();          // Epic 4
 }
 catch (Exception ex)
 {
